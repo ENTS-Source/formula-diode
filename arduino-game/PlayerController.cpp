@@ -16,15 +16,19 @@ void PlayerController::readVars() {
   }
 }
 
-void PlayerController::update() {
+void PlayerController::runPhysics() {
   this->readVars();
-  
+
+  // Check to see if we should be running physics at all
+  if ((millis() - this->lastPhysics) < PHYSICS_MS) {
+    return;
+  }
+  this->lastPhysics = millis();
+
   if (this->velocity > PHYSICS_MAX_VELOCITY) {
     this->velocity = PHYSICS_MAX_VELOCITY;
   }
-}
 
-void PlayerController::runPhysics() {
   // Move vehicle
   this->velocity -= this->velocity * PHYSICS_FRICTION;
   if (this->velocity < PHYSICS_MIN_VELOCITY) {

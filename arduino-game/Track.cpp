@@ -17,18 +17,8 @@ Track::Track(byte startPin, PlayerController* players[]) {
 // ======================================
 
 void Track::update() {
-  this->startBtn->update();
-  if (this->inGame) {
-    this->updatePlayers();
-  }
-
-  // Check to see if we should be running renders at all
-  if ((millis() - this->lastUpdate) < UPDATE_MS) {
-    return;
-  }
-  this->lastUpdate = millis();
-
   this->clearStrip();
+  this->startBtn->update();
 
   if (!this->inGame) {
     if (this->lightsStartMs > 0) {
@@ -54,7 +44,7 @@ void Track::update() {
       this->lightsStartMs = millis();
     }
   } else {
-    this->updatePlayerPhysics();
+    this->updatePlayers();
     this->drawPlayers();
   }
 
@@ -65,12 +55,6 @@ void Track::update() {
 // ======================================
 
 void Track::updatePlayers() {
-  for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
-    this->players[i]->update();
-  }
-}
-
-void Track::updatePlayerPhysics() {
   for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
     this->players[i]->runPhysics();
   }

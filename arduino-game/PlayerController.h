@@ -10,12 +10,16 @@
 #define PHYSICS_MAX_VELOCITY 3
 #define PHYSICS_MIN_VELOCITY 0
 // TODO: Gravity
+#define PHYSICS_MS 5 // Time between physics checks
 
 class PlayerController {
   private:
     // Vehicle properties
     float velocity;
     float position;
+
+    // Physics
+    unsigned long lastPhysics;
 
     // Misc
     Button* btn;
@@ -32,7 +36,6 @@ class PlayerController {
     // Constructors + functions
     PlayerController(byte pin, CRGB color);
     void runPhysics();
-    void update();
 };
 
 #endif
