@@ -1,45 +1,30 @@
 #include "PlayerController.h"
 
-PlayerController::PlayerController(byte pin) {
-  pinMode(pin, INPUT);
-
-  this->readPin = pin;
+PlayerController::PlayerController(byte pin, CRGB color) {
+  this->btn = new Button(pin);
   this->length = 3;
   this->position = 0;
   this->location = 0;
   this->velocity = 0;
-  this->color = CRGB::Blue;
+  this->color = color;
 }
 
 void PlayerController::readVars() {
-  int val = digitalRead(this->readPin);
-  if (val != this->lastBtnRead) {
-    this->lastBtnReadMs = millis();
-    this->lastBtnRead = val;
+  this->btn->update();
+  if (this->btn->isDownTrigger) {
+    this->velocity += PHYSICS_ACCL;
   }
-  if ((millis() - this->lastBtnReadMs) > this->debounceDelayMs) {
-    if (val != this->lastBtnState) {
-      this->lastBtnState = val;
-      if (this->lastBtnState == BTN_CLOSED) {
-        this->velocity += PHYSICS_ACCL;
-      }
-    }
+}
+
+void PlayerController::update() {
+  this->readVars();
+  
+  if (this->velocity > PHYSICS_MAX_VELOCITY) {
+    this->velocity = PHYSICS_MAX_VELOCITY;
   }
 }
 
 void PlayerController::runPhysics() {
-  this->readVars();
-
-  // Check to see if we should be running physics at all
-  if ((millis() - this->lastPhysics) < PHYSICS_MS) {
-    return;
-  }
-  this->lastPhysics = millis();
-
-  if (this->velocity > PHYSICS_MAX_VELOCITY) {
-    this->velocity = PHYSICS_MAX_VELOCITY;
-  }
-
   // Move vehicle
   this->velocity -= this->velocity * PHYSICS_FRICTION;
   if (this->velocity < PHYSICS_MIN_VELOCITY) {
