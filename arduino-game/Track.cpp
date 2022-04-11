@@ -72,6 +72,9 @@ void Track::clearStrip() {
 void Track::drawPlayers() {
   // Figure out where each player is an render them into the LEDs
   int positionMap[STRIP_LENGTH * STRIP_COUNT];
+  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+    positionMap[i] = 0;
+  }
   for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
     PlayerController* player = this->players[i];
     int startPos = player->location % STRIP_LENGTH;
