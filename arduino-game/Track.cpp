@@ -139,6 +139,10 @@ void Track::drawPlayers() {
   }
 }
 
+void Track::setLed(int i, CRGB color) {
+  this->leds[i] = color;
+}
+
 void Track::render() {
   FastLED.show();
 }

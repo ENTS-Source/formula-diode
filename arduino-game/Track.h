@@ -37,12 +37,13 @@ class Track {
     void clearStrip();
     void drawPlayers();
     void drawWinner();
-    void render();
   
   public:
     // Constructors and functions
     Track(byte startPin, PlayerController* players[]);
     void update();
+    void setLed(int i, CRGB color); // use sparingly
+    void render();
 };
 
 #endif

@@ -1,5 +1,7 @@
 #include <FastLED.h>
+#include "PlayerController.h"
 #include "Track.h"
+#include "Networking.h"
 
 // NodeMCU / ESP8266
 
@@ -15,6 +17,7 @@ CRGB TRAFFIC_YELLOW = CRGB(255, 200, 0);
 CRGB TRAFFIC_GREEN = CRGB(0, 255, 0);
 
 Track* track;
+Networking* networking;
 
 void setup() {
   randomSeed(analogRead(D6)); // unconnected
@@ -27,8 +30,10 @@ void setup() {
   players[3] = new PlayerController(D3, PLAYER4_COLOR);
 
   track = new Track(D5, players);
+  networking = new Networking(track);
 }
 
 void loop() {
+  networking->update();
   track->update();
 }
