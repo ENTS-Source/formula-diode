@@ -26,6 +26,7 @@ class Button {
     // Constructors + functions
     Button(byte pin);
     void update();
+    void updateBlocking();
 };
 
 #endif

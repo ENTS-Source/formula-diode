@@ -25,7 +25,6 @@ class Track {
     CRGB leds[STRIP_LENGTH * STRIP_COUNT];
     unsigned long startTimeMs;
     bool inGame;
-    Button* startBtn;
     unsigned long lightsStartMs;
     unsigned long endMs;
     PlayerController* winner;
@@ -39,6 +38,9 @@ class Track {
     void drawWinner();
   
   public:
+    // Board state
+    Button* startBtn;
+
     // Constructors and functions
     Track(byte startPin, PlayerController* players[]);
     void update();

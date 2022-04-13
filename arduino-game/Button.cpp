@@ -33,3 +33,9 @@ void Button::update() {
     }
   }
 }
+
+void Button::updateBlocking() {
+  this->update();
+  delay(BTN_DEBOUNCE_MS + 5);
+  this->update();
+}
