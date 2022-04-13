@@ -9,7 +9,6 @@ Networking::Networking(Track* track) {
   WiFiManager wm; // internal constructor
 
   track->startBtn->updateBlocking();
-  Serial.println(track->startBtn->isPressed);
   if (track->startBtn->isPressed) {
     Serial.println("Wifi reset button pressed - clearing wifi manager");
     wm.resetSettings();
