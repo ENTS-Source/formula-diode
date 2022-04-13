@@ -2,11 +2,16 @@
 
 PlayerController::PlayerController(byte pin, CRGB color) {
   this->btn = new Button(pin);
+  this->color = color;
+  this->reset();
+}
+
+void PlayerController::reset() {
   this->length = 3;
   this->position = 0;
   this->location = 0;
   this->velocity = 0;
-  this->color = color;
+  this->finishMs = 0;
 }
 
 void PlayerController::readVars() {
@@ -17,6 +22,10 @@ void PlayerController::readVars() {
 }
 
 void PlayerController::runPhysics() {
+  if (this->finishMs > 0) {
+    return; // don't run physics if we're done the race
+  }
+
   this->readVars();
 
   // Check to see if we should be running physics at all

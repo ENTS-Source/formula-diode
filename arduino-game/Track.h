@@ -12,6 +12,7 @@
 #define MAX_LAPS 3
 #define NUM_PLAYERS_POSSIBLE 4
 #define TRAFFIC_START 7 // +1 from bottom, for aesthetics. Must be at least 6
+#define WINNER_SHOWN_MS 2500
 
 extern CRGB TRAFFIC_RED;
 extern CRGB TRAFFIC_YELLOW;
@@ -26,6 +27,8 @@ class Track {
     bool inGame;
     Button* startBtn;
     unsigned long lightsStartMs;
+    unsigned long endMs;
+    PlayerController* winner;
 
     // Physics / game engine
     void updatePlayers();
@@ -33,6 +36,7 @@ class Track {
     // Rendering
     void clearStrip();
     void drawPlayers();
+    void drawWinner();
     void render();
   
   public:

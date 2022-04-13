@@ -33,9 +33,13 @@ class PlayerController {
     int length;
     CRGB color;
 
+    // Game state
+    unsigned long finishMs;
+
     // Constructors + functions
     PlayerController(byte pin, CRGB color);
     void runPhysics();
+    void reset();
 };
 
 #endif

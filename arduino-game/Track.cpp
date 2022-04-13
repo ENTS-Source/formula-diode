@@ -5,6 +5,8 @@ Track::Track(byte startPin, PlayerController* players[]) {
   for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
     this->players[i] = players[i];
   }
+  this->winner = NULL;
+  this->endMs = 0;
   this->inGame = false;
   this->startTimeMs = 0;
   this->lightsStartMs = 0;
@@ -21,7 +23,15 @@ void Track::update() {
   this->startBtn->update();
 
   if (!this->inGame) {
-    if (this->lightsStartMs > 0) {
+    if (this->winner != NULL) {
+      unsigned long timeDiff = millis() - this->endMs;
+      if (timeDiff < WINNER_SHOWN_MS) {
+        this->drawWinner();
+      } else {
+        this->winner = NULL;
+        this->endMs = 0;
+      }
+    } else if (this->lightsStartMs > 0) {
       this->leds[TRAFFIC_START] = TRAFFIC_RED;
       this->leds[TRAFFIC_START - 1] = TRAFFIC_RED;
 
@@ -39,6 +49,11 @@ void Track::update() {
         this->inGame = true;
         this->lightsStartMs = 0;
         this->startTimeMs = millis();
+
+        // Ensure the players aren't flagged as crossing the line
+        for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+          this->players[i]->reset();
+        }
       }
     } else if (this->startBtn->isDownTrigger) {
       this->lightsStartMs = millis();
@@ -55,8 +70,19 @@ void Track::update() {
 // ======================================
 
 void Track::updatePlayers() {
+  bool allDone = true;
   for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
     this->players[i]->runPhysics();
+    allDone = allDone && (this->players[i]->finishMs > 0);
+  }
+  if (allDone) {
+    this->inGame = false;
+    this->endMs = millis();
+    for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+      if (this->winner == NULL || this->winner->finishMs > this->players[i]->finishMs) {
+        this->winner = this->players[i];
+      }
+    }
   }
 }
 
@@ -69,6 +95,12 @@ void Track::clearStrip() {
   }
 }
 
+void Track::drawWinner() {
+  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+    this->leds[i] = this->winner->color;
+  }
+}
+
 void Track::drawPlayers() {
   // Figure out where each player is an render them into the LEDs
   int positionMap[STRIP_LENGTH * STRIP_COUNT];
@@ -77,6 +109,12 @@ void Track::drawPlayers() {
   }
   for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
     PlayerController* player = this->players[i];
+    if (player->finishMs > 0) { // check first so we don't update the lap time
+      continue;
+    }
+    if (player->location / STRIP_LENGTH >= MAX_LAPS) {
+      player->finishMs = millis();
+    }
     int startPos = player->location % STRIP_LENGTH;
     for (int j = 0; j < player->length; j++) {
       positionMap[startPos + j]++;
