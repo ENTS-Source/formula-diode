@@ -5,7 +5,7 @@
 #include <FastLED.h>
 #include "Button.h"
 
-#define PHYSICS_ACCL 0.2 // Velocity added per button press
+#define PHYSICS_ACCL 0.07 // Velocity added per button press
 #define PHYSICS_FRICTION 0.015
 #define PHYSICS_MAX_VELOCITY 3
 #define PHYSICS_MIN_VELOCITY 0

@@ -10,7 +10,7 @@
 #define STRIP_LENGTH 50
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3
-#define NUM_PLAYERS_POSSIBLE 4
+#define NUM_PLAYERS_POSSIBLE 2
 #define TRAFFIC_START 7 // +1 from bottom, for aesthetics. Must be at least 6
 #define WINNER_SHOWN_MS 2500
 
