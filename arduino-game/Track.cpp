@@ -1,10 +1,13 @@
 #include "Track.h"
 
-Track::Track(byte startPin, PlayerController* players[]) {
+Track::Track(byte startPin, PlayerController* players[], Config* config) {
+  this->config = config;
+
   FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(this->leds, STRIP_LENGTH * STRIP_COUNT);
-  for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) {
     this->players[i] = players[i];
   }
+
   this->winner = NULL;
   this->endMs = 0;
   this->inGame = false;
@@ -51,7 +54,7 @@ void Track::update() {
         this->startTimeMs = millis();
 
         // Ensure the players aren't flagged as crossing the line
-        for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+        for (int i = 0; i < MAX_PLAYERS; i++) {
           this->players[i]->reset();
         }
       }
@@ -71,14 +74,14 @@ void Track::update() {
 
 void Track::updatePlayers() {
   bool allDone = true;
-  for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+  for (int i = 0; i < this->config->numPlayers; i++) {
     this->players[i]->runPhysics();
     allDone = allDone && (this->players[i]->finishMs > 0);
   }
   if (allDone) {
     this->inGame = false;
     this->endMs = millis();
-    for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+    for (int i = 0; i < this->config->numPlayers; i++) {
       if (this->winner == NULL || this->winner->finishMs > this->players[i]->finishMs) {
         this->winner = this->players[i];
       }
@@ -107,7 +110,7 @@ void Track::drawPlayers() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     positionMap[i] = 0;
   }
-  for (int i = 0; i < NUM_PLAYERS_POSSIBLE; i++) {
+  for (int i = 0; i < this->config->numPlayers; i++) {
     PlayerController* player = this->players[i];
     if (player->finishMs > 0) { // check first so we don't update the lap time
       continue;

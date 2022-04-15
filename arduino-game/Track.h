@@ -5,12 +5,12 @@
 #include <FastLED.h>
 #include "Button.h"
 #include "PlayerController.h"
+#include "Config.h"
 
 #define LED_STRIP_PIN D4
 #define STRIP_LENGTH 50
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
-#define MAX_LAPS 3
-#define NUM_PLAYERS_POSSIBLE 2
+#define MAX_LAPS 3 // TODO: Config val
 #define TRAFFIC_START 7 // +1 from bottom, for aesthetics. Must be at least 6
 #define WINNER_SHOWN_MS 2500
 
@@ -21,7 +21,8 @@ extern CRGB TRAFFIC_GREEN;
 class Track {
   private:
     // Board state
-    PlayerController* players[NUM_PLAYERS_POSSIBLE];
+    Config* config;
+    PlayerController* players[MAX_PLAYERS];
     CRGB leds[STRIP_LENGTH * STRIP_COUNT];
     unsigned long startTimeMs;
     bool inGame;
@@ -42,7 +43,7 @@ class Track {
     Button* startBtn;
 
     // Constructors and functions
-    Track(byte startPin, PlayerController* players[]);
+    Track(byte startPin, PlayerController* players[], Config* config);
     void update();
     void setLed(int i, CRGB color); // use sparingly
     void render();
