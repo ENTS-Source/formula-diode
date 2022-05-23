@@ -16,10 +16,8 @@ Networking::Networking(Track* track, Config* config) {
   }
 
   this->scoreboardIPField = new WiFiManagerParameter(FIELD_SCOREBOARD_NAME, "Scoreboard IP", "none", CONF_SB_IP_LEN, "placeholder=\"none\"");
-  this->numPlayersField = new WiFiManagerParameter(FIELD_NUMPLAYERS_NAME, "Number of players", "2", 1, ("type=\"number\" placeholder=\"2\" min=\"" + String(MIN_PLAYERS) + "\" max=\"" + String(MAX_PLAYERS) + "\"").c_str());
 
   this->wm.addParameter(this->scoreboardIPField);
-  this->wm.addParameter(this->numPlayersField);
   this->wm.setSaveParamsCallback([this]() {
     this->saveWmParams();
   });
@@ -57,6 +55,5 @@ void Networking::update() {
 
 void Networking::saveWmParams() {
   this->config->scoreboardIP = String(this->scoreboardIPField->getValue());
-  this->config->numPlayers = byte(String(this->numPlayersField->getValue()).toInt());
   this->config->write();
 }

@@ -9,10 +9,8 @@
 #define CONF_SB_IP_ADDR 0
 #define CONF_SB_IP_LEN 16 // string, fixed length
 
-#define CONF_NPLAYERS_ADDR 16 // byte
-
 #define MIN_PLAYERS 1
-#define MAX_PLAYERS 4
+#define MAX_PLAYERS 4 // Must match GameNet I2C_PLAYERS
 
 class Config {
   private:
@@ -27,7 +25,6 @@ class Config {
   public:
     String scoreboardIP;
     int numLeds;
-    int numPlayers;
 
     Config();
     void read();

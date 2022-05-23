@@ -6,21 +6,13 @@ Config::Config() {
 
 void Config::read() {
   this->scoreboardIP = this->readString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN);
-  this->numPlayers = this->readByte(CONF_NPLAYERS_ADDR);
 
   // Validation
   this->scoreboardIP.trim();
-  if (this->numPlayers < MIN_PLAYERS) {
-    this->numPlayers = MIN_PLAYERS;
-  } else if (this->numPlayers > MAX_PLAYERS) {
-    this->numPlayers = MAX_PLAYERS;
-  }
 
   // Debug
   Serial.print("Scoreboard IP: ");
   Serial.println(this->scoreboardIP);
-  Serial.print("Num players: ");
-  Serial.println(this->numPlayers);
 }
 
 void Config::write() {
@@ -38,13 +30,11 @@ void Config::write() {
   }
 
   this->writeString(CONF_SB_IP_ADDR, sbIP);
-  this->writeByte(CONF_NPLAYERS_ADDR, byte(this->numPlayers));
   this->read(); // read back for validation
 }
 
 void Config::clear() {
   this->scoreboardIP = "";
-  this->numPlayers = 0;
   this->write();
 }
 

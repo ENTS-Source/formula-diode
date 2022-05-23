@@ -1,9 +1,9 @@
 #include "PlayerController.h"
 
-PlayerController::PlayerController(byte pin, CRGB color) {
-  this->btn = new Button(pin);
+PlayerController::PlayerController(CRGB color) {
   this->color = color;
   this->reset();
+  this->isConnected = false;
 }
 
 void PlayerController::reset() {
@@ -12,21 +12,21 @@ void PlayerController::reset() {
   this->location = 0;
   this->velocity = 0;
   this->finishMs = 0;
-}
-
-void PlayerController::readVars() {
-  this->btn->update();
-  if (this->btn->isDownTrigger) {
-    this->velocity += PHYSICS_ACCL;
-  }
+  this->unhandledPresses = 0;
 }
 
 void PlayerController::runPhysics() {
+  if (!this->isConnected) {
+    return;
+  }
   if (this->finishMs > 0) {
     return; // don't run physics if we're done the race
   }
 
-  this->readVars();
+  for (int i = 0; i < this->unhandledPresses; i++) {
+    this->velocity += PHYSICS_ACCL;
+  }
+  this->unhandledPresses = 0;
 
   // Check to see if we should be running physics at all
   if ((millis() - this->lastPhysics) < PHYSICS_MS) {
@@ -45,4 +45,8 @@ void PlayerController::runPhysics() {
   }
   this->position += this->velocity;
   this->location = round(this->position); // update int location
+}
+
+void PlayerController::recordPresses(int count) {
+  this->unhandledPresses += count;
 }

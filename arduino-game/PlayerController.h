@@ -19,13 +19,8 @@ class PlayerController {
     float position;
 
     // Physics
+    int unhandledPresses;
     unsigned long lastPhysics;
-
-    // Misc
-    Button* btn;
-
-    // Functions
-    void readVars();
 
   public:
     // Vehicle properties
@@ -35,9 +30,11 @@ class PlayerController {
 
     // Game state
     unsigned long finishMs;
+    bool isConnected;
 
     // Constructors + functions
-    PlayerController(byte pin, CRGB color);
+    PlayerController(CRGB color);
+    void recordPresses(int count);
     void runPhysics();
     void reset();
 };

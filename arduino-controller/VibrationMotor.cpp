@@ -12,6 +12,7 @@ void VibrationMotor::on() {
 
 void VibrationMotor::off() {
   digitalWrite(this->pin, LOW);
+  this->untilMs = 0;
 }
 
 void VibrationMotor::onForMs(unsigned long ms) {

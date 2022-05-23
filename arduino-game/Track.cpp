@@ -21,7 +21,8 @@ Track::Track(byte startPin, PlayerController* players[], Config* config) {
 // Primary loop
 // ======================================
 
-void Track::update() {
+bool Track::update() {
+  bool shouldReset = false;
   this->clearStrip();
   this->startBtn->update();
 
@@ -49,6 +50,7 @@ void Track::update() {
       }
 
       if ((millis() - this->lightsStartMs) >= 2400) {
+        shouldReset = true;
         this->inGame = true;
         this->lightsStartMs = 0;
         this->startTimeMs = millis();
@@ -60,6 +62,7 @@ void Track::update() {
       }
     } else if (this->startBtn->isDownTrigger) {
       this->lightsStartMs = millis();
+      shouldReset = true;
     }
   } else {
     this->updatePlayers();
@@ -67,6 +70,7 @@ void Track::update() {
   }
 
   this->render();
+  return shouldReset;
 }
 
 // Game functions
@@ -74,19 +78,32 @@ void Track::update() {
 
 void Track::updatePlayers() {
   bool allDone = true;
-  for (int i = 0; i < this->config->numPlayers; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    if (!this->players[i]->isConnected) {
+      continue;
+    }
     this->players[i]->runPhysics();
     allDone = allDone && (this->players[i]->finishMs > 0);
   }
   if (allDone) {
     this->inGame = false;
     this->endMs = millis();
-    for (int i = 0; i < this->config->numPlayers; i++) {
+    for (int i = 0; i < MAX_PLAYERS; i++) {
+      if (!this->players[i]->isConnected) {
+        continue;
+      }
       if (this->winner == NULL || this->winner->finishMs > this->players[i]->finishMs) {
         this->winner = this->players[i];
       }
     }
   }
+}
+
+void Track::setPlayerState(int player, bool isConnected) {
+  this->players[player]->isConnected = isConnected;
+  Serial.print(player);
+  Serial.print(" is now connected? ");
+  Serial.println(isConnected);
 }
 
 // Render functions
@@ -110,8 +127,11 @@ void Track::drawPlayers() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     positionMap[i] = 0;
   }
-  for (int i = 0; i < this->config->numPlayers; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) {
     PlayerController* player = this->players[i];
+    if (!player->isConnected) {
+      continue;
+    }
     if (player->finishMs > 0) { // check first so we don't update the lap time
       continue;
     }

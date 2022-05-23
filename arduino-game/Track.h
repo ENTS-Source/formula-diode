@@ -44,9 +44,10 @@ class Track {
 
     // Constructors and functions
     Track(byte startPin, PlayerController* players[], Config* config);
-    void update();
+    bool update();
     void setLed(int i, CRGB color); // use sparingly
     void render();
+    void setPlayerState(int player, bool isConnected);
 };
 
 #endif
