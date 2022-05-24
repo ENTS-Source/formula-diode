@@ -8,7 +8,19 @@ void Config::read() {
   this->scoreboardIP = this->readString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN);
 
   // Validation
-  this->scoreboardIP.trim();
+  MatchState ms;
+  char sbIpArr[CONF_SB_IP_LEN];
+  this->scoreboardIP.toCharArray(sbIpArr, CONF_SB_IP_LEN);
+  ms.Target(sbIpArr, CONF_SB_IP_LEN);
+  if (ms.Match("[0-9]+.[0-9]+.[0-9]+.[0-9]+") != REGEXP_MATCHED) {
+    Serial.println("Scoreboard IP '" + this->scoreboardIP + "' did not match regex - resetting");
+    this->scoreboardIP = NO_SB_IP;
+  }
+  this->scoreboardIP.trim(); // trim after regex because we rely on fixed length
+  if (this->scoreboardIP.length() <= 0) {
+    Serial.println("Scoreboard IP was empty - resetting");
+    this->scoreboardIP = NO_SB_IP;
+  }
 
   // Debug
   Serial.print("Scoreboard IP: ");
@@ -30,6 +42,7 @@ void Config::write() {
   }
 
   this->writeString(CONF_SB_IP_ADDR, sbIP);
+  EEPROM.commit();
   this->read(); // read back for validation
 }
 

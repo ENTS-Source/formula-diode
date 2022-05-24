@@ -6,6 +6,7 @@
 #include "Button.h"
 #include "PlayerController.h"
 #include "Config.h"
+#include "GameNet.h"
 
 #define LED_STRIP_PIN D4
 #define STRIP_LENGTH 50
@@ -22,7 +23,7 @@ class Track {
   private:
     // Board state
     Config* config;
-    PlayerController* players[MAX_PLAYERS];
+    PlayerController* players[I2C_PLAYERS];
     CRGB leds[STRIP_LENGTH * STRIP_COUNT];
     unsigned long startTimeMs;
     bool inGame;

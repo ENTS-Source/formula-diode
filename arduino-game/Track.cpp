@@ -4,7 +4,7 @@ Track::Track(byte startPin, PlayerController* players[], Config* config) {
   this->config = config;
 
   FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(this->leds, STRIP_LENGTH * STRIP_COUNT);
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     this->players[i] = players[i];
   }
 
@@ -56,7 +56,7 @@ bool Track::update() {
         this->startTimeMs = millis();
 
         // Ensure the players aren't flagged as crossing the line
-        for (int i = 0; i < MAX_PLAYERS; i++) {
+        for (int i = 0; i < I2C_PLAYERS; i++) {
           this->players[i]->reset();
         }
       }
@@ -78,7 +78,7 @@ bool Track::update() {
 
 void Track::updatePlayers() {
   bool allDone = true;
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     if (!this->players[i]->isConnected) {
       continue;
     }
@@ -88,7 +88,7 @@ void Track::updatePlayers() {
   if (allDone) {
     this->inGame = false;
     this->endMs = millis();
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    for (int i = 0; i < I2C_PLAYERS; i++) {
       if (!this->players[i]->isConnected) {
         continue;
       }
@@ -127,7 +127,7 @@ void Track::drawPlayers() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     positionMap[i] = 0;
   }
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     PlayerController* player = this->players[i];
     if (!player->isConnected) {
       continue;

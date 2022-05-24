@@ -22,7 +22,7 @@ Config* config;
 Track* track;
 Networking* networking;
 GameNet* gamenet;
-PlayerController* players[MAX_PLAYERS];
+PlayerController* players[I2C_PLAYERS];
 
 void setup() {
   randomSeed(analogRead(D6)); // unconnected
@@ -52,23 +52,24 @@ void loop() {
   }
   gamenet->update();
 
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     byte state[TOHOST_LENGTH];
     if (gamenet->populateState(i, state)) {
       players[i]->recordPresses(state[0]);
     }
+    networking->sendPlayerState(i, state);
   }
 }
 
 void updatePlayerIds() {
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     gamenet->updateColor(i, players[i]->color.r, players[i]->color.g, players[i]->color.b);
   }
 }
 
 void scanForPlayers() {
   gamenet->scan();
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < I2C_PLAYERS; i++) {
     track->setPlayerState(i, gamenet->isPlayerConnected(i));
   }
 }

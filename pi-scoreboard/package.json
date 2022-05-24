@@ -1,0 +1,22 @@
+{
+  "name": "pi-scoreboard",
+  "version": "0.0.1",
+  "description": "Scoreboard application for the led-racer game",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ENTS-Source/led-race.git"
+  },
+  "author": "ENTS <directors@ents.ca>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ENTS-Source/led-race/issues"
+  },
+  "homepage": "https://github.com/ENTS-Source/led-race#readme",
+  "dependencies": {
+    "ws": "^8.6.0"
+  }
+}

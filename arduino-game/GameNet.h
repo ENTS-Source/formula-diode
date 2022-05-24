@@ -8,7 +8,7 @@
 #define FROMHOST_ASSIGN 0x10
 #define FROMHOST_RESET 0x11
 
-#define I2C_PLAYERS 4 // Must match Config MAX_PLAYERS
+#define I2C_PLAYERS 4
 
 #define I2C_PLAYER_START 0
 

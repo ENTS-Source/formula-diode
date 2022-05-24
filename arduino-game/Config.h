@@ -3,14 +3,13 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <Regexp.h>
 
 #define CONF_EEPROM_SIZE 512
 
-#define CONF_SB_IP_ADDR 0
+#define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
 #define CONF_SB_IP_LEN 16 // string, fixed length
-
-#define MIN_PLAYERS 1
-#define MAX_PLAYERS 4 // Must match GameNet I2C_PLAYERS
+#define NO_SB_IP "none"
 
 class Config {
   private:
