@@ -1,5 +1,9 @@
 #include "Networking.h"
 
+void voidMqttCallback(char* topic, byte* payload, unsigned int length) {
+  // handle message arrived
+}
+
 Networking::Networking(Track* track, Config* config) {
   this->config = config;
 
@@ -52,8 +56,19 @@ Networking::Networking(Track* track, Config* config) {
   this->saveWmParams(); // in case the user didn't set them up
 
   if (this->config->scoreboardIP != NO_SB_IP) {
-    Serial.println("Connecting to TCP server");
-    if (!this->tcpClient.connect(this->config->scoreboardIP, 9000)) {
+    Serial.println("Connecting to scoreboard server");
+    IPAddress ip;
+    if (!ip.fromString(this->config->scoreboardIP)) {
+      Serial.println("Invalid IP");
+      while (true) {
+        // Enter error state
+        track->setLed(NW_STATUS_LED, CRGB::Red);
+        track->render();
+        delay(1000);
+      }
+    }
+    this->pubsub = new PubSubClient(ip, 1883, voidMqttCallback, this->tcpClient);
+    if (!this->pubsub->connect("arduino")) {
       Serial.println("Error in connection");
       while (true) {
         // Enter error state
@@ -62,7 +77,7 @@ Networking::Networking(Track* track, Config* config) {
         delay(1000);
       }
     }
-    Serial.println("Connected to TCP");
+    Serial.println("Connected to scoreboard server");
   }
 
   track->setLed(NW_STATUS_LED, CRGB::Black);
@@ -71,6 +86,9 @@ Networking::Networking(Track* track, Config* config) {
 
 void Networking::update() {
   // TODO: Things?
+  if (this->config->scoreboardIP != NO_SB_IP) {
+    this->pubsub->loop();
+  }
 }
 
 void Networking::saveWmParams() {
@@ -79,12 +97,10 @@ void Networking::saveWmParams() {
 }
 
 void Networking::sendPlayerState(int playerNum, byte state[TOHOST_LENGTH]) {
-  // TODO: Make this work
-  this->tcpClient.print(WS_PLAYER_UPDATE);
-  this->tcpClient.print(playerNum);
+  byte payload[TOHOST_LENGTH + 1];
+  payload[0] = playerNum;
   for (int i = 0; i < TOHOST_LENGTH; i++) {
-    this->tcpClient.print(state[i]);
+    payload[i + 1] = state[i];
   }
-  this->tcpClient.println();
-  this->tcpClient.flush();
+  this->pubsub->publish("led", payload, TOHOST_LENGTH + 1);
 }

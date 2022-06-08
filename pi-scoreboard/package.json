@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/ENTS-Source/led-race#readme",
   "dependencies": {
-    "ws": "^8.6.0"
+    "aedes": "^0.47.0"
   }
 }

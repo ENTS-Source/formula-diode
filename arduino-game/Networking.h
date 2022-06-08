@@ -5,6 +5,7 @@
 #include <ESP8266WiFi.h>
 #include <FastLED.h>
 #include <WiFiManager.h>
+#include <PubSubClient.h>
 #include "Track.h"
 #include "Config.h"
 #include "GameNet.h"
@@ -20,6 +21,7 @@ class Networking {
   private:
     Config* config;
     WiFiClient tcpClient;
+    PubSubClient* pubsub;
 
     // WifiManager stuff
     WiFiManager wm; // internal constructor
