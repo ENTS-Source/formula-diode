@@ -1,0 +1,1 @@
+Created using https://www.electronforge.io/guides/framework-integration/react-with-typescript as a guide.
