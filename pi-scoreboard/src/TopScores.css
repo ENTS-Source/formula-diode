@@ -1,0 +1,18 @@
+.fd_topScores > h2 {
+    font-size: 5em;
+    padding: 0.3em;
+}
+
+.fd_scores {
+    display: flex;
+}
+
+.fd_score {
+    /* border: 1px solid black; */
+    border-radius: 22px;
+    padding: 2em;
+    margin: 0.2em;
+    flex: 1;
+    background-color: #97d0ff5d;
+    font-size: 2em;
+}
