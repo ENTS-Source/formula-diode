@@ -56,13 +56,20 @@ bool Track::update() {
         this->startTimeMs = millis();
 
         // Ensure the players aren't flagged as crossing the line
+        int nPlayers = 0;
         for (int i = 0; i < I2C_PLAYERS; i++) {
           this->players[i]->reset();
+          if (this->players[i]->isConnected) {
+            nPlayers++;
+          }
         }
+
+        markGameStart(nPlayers);
       }
     } else if (this->startBtn->isDownTrigger) {
       this->lightsStartMs = millis();
       shouldReset = true;
+      markGameIntro();
     }
   } else {
     this->updatePlayers();
@@ -79,23 +86,68 @@ bool Track::update() {
 void Track::updatePlayers() {
   bool allDone = true;
   for (int i = 0; i < I2C_PLAYERS; i++) {
-    if (!this->players[i]->isConnected) {
+    PlayerController* player = this->players[i];
+    if (!player->isConnected) {
       continue;
     }
-    this->players[i]->runPhysics();
-    allDone = allDone && (this->players[i]->finishMs > 0);
+    
+    if (player->finishMs > 0) { // check first so we don't render the lap times
+      continue;
+    }
+
+    int oldLaps = player->location / STRIP_LENGTH;
+    
+    player->runPhysics();
+    
+    int newLaps = player->location / STRIP_LENGTH;
+
+    if (newLaps != oldLaps) {
+      Serial.print("@@ Calculating lap time for player: ");
+      Serial.println(i);
+      unsigned long lastLapMs = player->lastLapFinishMs;
+      Serial.print("@@ Debug - Game start time: ");
+      Serial.println(this->startTimeMs);
+      Serial.print("@@ Debug - Free Heap: ");
+      Serial.println(ESP.getFreeHeap());
+      if (lastLapMs == 0) {
+        Serial.print("@@ Using game start time as last lap finish time: ");
+        Serial.println(this->startTimeMs);
+        lastLapMs = this->startTimeMs;
+      } else {
+        Serial.print("@@ Using last lap finish time: ");
+        Serial.println(lastLapMs);
+      }
+      unsigned long lapTime = millis();
+      Serial.print("@@ Current time: ");
+      Serial.println(lapTime);
+      Serial.print("@@ Lap time: ");
+      Serial.println(lapTime - lastLapMs);
+      Serial.println("-------------------------------------------------------------------------");
+      markLapCompleted(i, newLaps, lapTime - lastLapMs);
+      player->lastLapFinishMs = lapTime;
+    }
+    
+    if (player->location / STRIP_LENGTH >= MAX_LAPS) {
+      player->finishMs = millis();
+      markAllLapsCompleted(i, player->finishMs - this->startTimeMs);
+    }
+    
+    allDone = allDone && (player->finishMs > 0);
   }
   if (allDone) {
     this->inGame = false;
     this->endMs = millis();
+    int winnerIdx = 0;
     for (int i = 0; i < I2C_PLAYERS; i++) {
       if (!this->players[i]->isConnected) {
         continue;
       }
       if (this->winner == NULL || this->winner->finishMs > this->players[i]->finishMs) {
         this->winner = this->players[i];
+        winnerIdx = i;
       }
     }
+    markGameEnd(winnerIdx);
   }
 }
 
@@ -132,11 +184,8 @@ void Track::drawPlayers() {
     if (!player->isConnected) {
       continue;
     }
-    if (player->finishMs > 0) { // check first so we don't update the lap time
+    if (player->finishMs > 0) { // check first so we don't render them
       continue;
-    }
-    if (player->location / STRIP_LENGTH >= MAX_LAPS) {
-      player->finishMs = millis();
     }
     int startPos = player->location % STRIP_LENGTH;
     for (int j = 0; j < player->length; j++) {

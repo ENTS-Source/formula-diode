@@ -5,6 +5,9 @@
 #include "Config.h"
 #include "GameNet.h"
 
+// Need to import this here so we don't try to import it a thousand times.
+#include <AsyncHTTPRequest_Generic.h>
+
 // NodeMCU / ESP8266
 
 // Note that LED_STRIP_PIN is set in Track.h
@@ -57,7 +60,6 @@ void loop() {
     if (gamenet->populateState(i, state)) {
       players[i]->recordPresses(state[0]);
     }
-    networking->sendPlayerState(i, state);
   }
 }
 
@@ -72,4 +74,68 @@ void scanForPlayers() {
   for (int i = 0; i < I2C_PLAYERS; i++) {
     track->setPlayerState(i, gamenet->isPlayerConnected(i));
   }
+}
+
+void markLapCompleted(int playerNum, int lap, unsigned long ms) {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms)).c_str())) {
+    Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void markAllLapsCompleted(int playerNum, unsigned long ms) {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms)).c_str())) {
+    Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void markDNF(int playerNum) {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/player_dnf?player=" + String(playerNum)).c_str())) {
+    Serial.println("ERROR: markDNF is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void markGameEnd(int winner) {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/game_end?winner=" + String(winner)).c_str())) {
+    Serial.println("ERROR: markGameEnd is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void markGameStart(int numPlayers) {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/game_start?players=" + String(numPlayers)).c_str())) {
+    Serial.println("ERROR: markGameStart is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void markGameIntro() {
+  AsyncHTTPRequest* request = new AsyncHTTPRequest();
+  request->onReadyStateChange(ignoreCallback);
+  if (!request->open("POST", (config->scoreboardIP + ":20304/game_intro").c_str())) {
+    Serial.println("ERROR: markGameStart is a BAD REQUEST");
+    return;
+  }
+  request->send();
+}
+
+void ignoreCallback(void* optParm, AsyncHTTPRequest* request, int readyState) {
+  // consume
 }

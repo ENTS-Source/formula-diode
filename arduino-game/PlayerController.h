@@ -30,6 +30,7 @@ class PlayerController {
 
     // Game state
     unsigned long finishMs;
+    unsigned long lastLapFinishMs;
     bool isConnected;
 
     // Constructors + functions

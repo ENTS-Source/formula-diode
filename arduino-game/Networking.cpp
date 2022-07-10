@@ -56,7 +56,7 @@ Networking::Networking(Track* track, Config* config) {
   this->saveWmParams(); // in case the user didn't set them up
 
   if (this->config->scoreboardIP != NO_SB_IP) {
-    Serial.println("Connecting to scoreboard server");
+    Serial.println("Validating scoreboard server details");
     IPAddress ip;
     if (!ip.fromString(this->config->scoreboardIP)) {
       Serial.println("Invalid IP");
@@ -67,17 +67,7 @@ Networking::Networking(Track* track, Config* config) {
         delay(1000);
       }
     }
-    this->pubsub = new PubSubClient(ip, 1883, voidMqttCallback, this->tcpClient);
-    if (!this->pubsub->connect("arduino")) {
-      Serial.println("Error in connection");
-      while (true) {
-        // Enter error state
-        track->setLed(NW_STATUS_LED, CRGB::Red);
-        track->render();
-        delay(1000);
-      }
-    }
-    Serial.println("Connected to scoreboard server");
+    Serial.println("Ready to connect to scoreboard server");
   }
 
   track->setLed(NW_STATUS_LED, CRGB::Black);
@@ -86,21 +76,9 @@ Networking::Networking(Track* track, Config* config) {
 
 void Networking::update() {
   // TODO: Things?
-  if (this->config->scoreboardIP != NO_SB_IP) {
-    this->pubsub->loop();
-  }
 }
 
 void Networking::saveWmParams() {
   this->config->scoreboardIP = String(this->scoreboardIPField->getValue());
   this->config->write();
-}
-
-void Networking::sendPlayerState(int playerNum, byte state[TOHOST_LENGTH]) {
-  byte payload[TOHOST_LENGTH + 1];
-  payload[0] = playerNum;
-  for (int i = 0; i < TOHOST_LENGTH; i++) {
-    payload[i + 1] = state[i];
-  }
-  this->pubsub->publish("led", payload, TOHOST_LENGTH + 1);
 }

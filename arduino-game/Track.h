@@ -19,6 +19,13 @@ extern CRGB TRAFFIC_RED;
 extern CRGB TRAFFIC_YELLOW;
 extern CRGB TRAFFIC_GREEN;
 
+extern void markGameIntro();
+extern void markGameStart(int numPlayers);
+extern void markGameEnd(int winner);
+extern void markDNF(int playerNum);
+extern void markAllLapsCompleted(int playerNum, unsigned long ms);
+extern void markLapCompleted(int playerNum, int lap, unsigned long ms);
+
 class Track {
   private:
     // Board state

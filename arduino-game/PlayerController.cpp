@@ -12,6 +12,7 @@ void PlayerController::reset() {
   this->location = 0;
   this->velocity = 0;
   this->finishMs = 0;
+  this->lastLapFinishMs = 0;
   this->unhandledPresses = 0;
 }
 
