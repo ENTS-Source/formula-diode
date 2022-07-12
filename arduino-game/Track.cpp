@@ -1,6 +1,6 @@
 #include "Track.h"
 
-Track::Track(byte startPin, PlayerController* players[], Config* config) {
+Track::Track(Button* startBtn, PlayerController* players[], Config* config) {
   this->config = config;
 
   FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(this->leds, STRIP_LENGTH * STRIP_COUNT);
@@ -13,7 +13,7 @@ Track::Track(byte startPin, PlayerController* players[], Config* config) {
   this->inGame = false;
   this->startTimeMs = 0;
   this->lightsStartMs = 0;
-  this->startBtn = new Button(startPin);
+  this->startBtn = startBtn;
   this->clearStrip();
   this->render();
 }

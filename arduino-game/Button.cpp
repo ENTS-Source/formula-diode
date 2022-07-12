@@ -1,6 +1,6 @@
 #include "Button.h"
 
-Button::Button(byte pin) {
+Button::Button(uint8_t pin) {
   pinMode(pin, INPUT);
   this->pin = pin;
   this->lastState = BTN_OPEN;

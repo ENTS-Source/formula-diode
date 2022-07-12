@@ -51,7 +51,7 @@ class Track {
     Button* startBtn;
 
     // Constructors and functions
-    Track(byte startPin, PlayerController* players[], Config* config);
+    Track(Button* startBtn, PlayerController* players[], Config* config);
     bool update();
     void setLed(int i, CRGB color); // use sparingly
     void render();

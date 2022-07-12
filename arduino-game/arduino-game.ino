@@ -12,6 +12,9 @@
 
 // Note that LED_STRIP_PIN is set in Track.h
 
+#define START_BTN_PIN     D5
+#define NOT_CONNECTED_PIN D6
+
 CRGB PLAYER1_COLOR = CRGB::Blue;
 CRGB PLAYER2_COLOR = CRGB::Red;
 CRGB PLAYER3_COLOR = CRGB::Green;
@@ -21,6 +24,7 @@ CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
 CRGB TRAFFIC_GREEN = CRGB(0, 132, 5);
 
+Button startBtn(START_BTN_PIN);
 Config* config;
 Track* track;
 Networking* networking;
@@ -28,7 +32,7 @@ GameNet* gamenet;
 PlayerController* players[I2C_PLAYERS];
 
 void setup() {
-  randomSeed(analogRead(D6)); // unconnected
+  randomSeed(analogRead(NOT_CONNECTED_PIN));
   Serial.begin(115200);
 
   players[0] = new PlayerController(PLAYER1_COLOR);
@@ -37,7 +41,7 @@ void setup() {
   players[3] = new PlayerController(PLAYER4_COLOR);
 
   config = new Config();
-  track = new Track(D5, players, config);
+  track = new Track(&startBtn, players, config);
   networking = new Networking(track, config); // networking will read/write config for us
   gamenet = new GameNet(D2, D1);
 

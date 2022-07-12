@@ -10,7 +10,7 @@
 class Button {
   private:
     // Comms
-    byte pin;
+    uint8_t pin;
 
     // State
     unsigned long lastReadMs;
@@ -24,7 +24,7 @@ class Button {
     bool isPressed;
 
     // Constructors + functions
-    Button(byte pin);
+    Button(uint8_t pin);
     void update();
     void updateBlocking();
 };
