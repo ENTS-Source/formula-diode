@@ -1,0 +1,30 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# Microchip MCP1825S-3302E/AB
+#
+DEF MCP1825S-3302E_AB U 0 40 Y Y 1 L N
+F0 "U" 0 200 50 H V L CNN 
+F1 "MCP1825S-3302E/AB" 0 300 50 H V L CNN 
+F2 "Microchip-MCP1825S-3302E_AB-*" 0 400 50 H I L CNN 
+F3 "" 0 500 50 H I L CNN 
+F4 "revB, Feb-2008" 0 600 50 H I L CNN "Datasheet Version"
+F5 "3-Lead Plastic Transistor Outline (AB) [TO-220]" 0 700 50 H I L CNN "Package Description"
+F6 "revBB, Aug-2009" 0 800 50 H I L CNN "Package Version"
+F7 "IC" 0 900 50 H I L CNN "category"
+F8 "1497481" 0 1000 50 H I L CNN "ciiva ids"
+F9 "58b37f196901784f" 0 1100 50 H I L CNN "library id"
+F10 "Microchip" 0 1200 50 H I L CNN "manufacturer"
+F11 "TO-220-AB3" 0 1300 50 H I L CNN "package"
+F12 "1300337993" 0 1400 50 H I L CNN "release date"
+F13 "7A512FA4-5D0D-4FE5-9955-15470618DE32" 0 1500 50 H I L CNN "vault revision"
+F14 "yes" 0 1600 50 H I L CNN "imported"
+DRAW
+X VIN 1 100 0 100 R 40 40 1 1 W 
+X GND 2 900 -200 100 L 40 40 1 1 W 
+X VOUT 3 900 0 100 L 40 40 1 1 W 
+S 200 100 800 -300 1 1 0 f
+ENDDRAW
+ENDDEF
+#
+# End Library

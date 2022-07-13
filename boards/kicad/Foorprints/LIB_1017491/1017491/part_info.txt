@@ -1,0 +1,9 @@
+Manufacturer=Phoenix Contact
+PartNumber=1017491
+PartCategory=Connector
+PackageCategory=Other
+PinCount=4
+Version=3.1
+Released=2019-10-29 09:30:13
+Downloaded=2022-07-12 21:41:28
+3D=Y

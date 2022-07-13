@@ -1,0 +1,9 @@
+Manufacturer=Amphenol
+PartNumber=54601-908WPLF
+PartCategory=Connector
+PackageCategory=Other
+PinCount=8
+Version=1.1
+Released=2018-11-23 17:37:29
+Downloaded=2022-07-07 17:43:52
+3D=Y

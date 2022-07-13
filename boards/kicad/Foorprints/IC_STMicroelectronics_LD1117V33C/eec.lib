@@ -1,0 +1,34 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# STMicroelectronics LD1117V33C
+#
+DEF LD1117V33C U 0 40 Y Y 1 L N
+F0 "U" 0 200 50 H V L CNN 
+F1 "LD1117V33C" 0 300 50 H V L CNN 
+F2 "STMicroelectronics-LD1117V33C-*" 0 400 50 H I L CNN 
+F3 "http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/DATASHEET/CD00000544.pdf" 0 500 50 H I L CNN 
+F4 "Manufacturer URL" 0 600 50 H I L CNN "Component Link 1 Description"
+F5 "http://www.st.com" 0 700 50 H I L CNN "Component Link 1 URL"
+F6 "Package Specification" 0 800 50 H I L CNN "Component Link 3 Description"
+F7 "http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/PACKAGE_INFORMATION/CD00004649.pdf" 0 900 50 H I L CNN "Component Link 3 URL"
+F8 "1/11/2011" 0 1000 50 H I L CNN "Datasheet Version"
+F9 "TO, Thru-Hole, Vertical, Heatsink Mounted; 3 In-Line Leads; Pitch 2.54 mm" 0 1100 50 H I L CNN "Package Description"
+F10 "ver3.0" 0 1200 50 H I L CNN "Package Version"
+F11 "IC" 0 1300 50 H I L CNN "category"
+F12 "1170400" 0 1400 50 H I L CNN "ciiva ids"
+F13 "3a5f6062f81a72c4" 0 1500 50 H I L CNN "library id"
+F14 "STMicroelectronics" 0 1600 50 H I L CNN "manufacturer"
+F15 "TO220" 0 1700 50 H I L CNN "package"
+F16 "1329864170" 0 1800 50 H I L CNN "release date"
+F17 "EC210AAF-CE09-41D6-A530-777AE1C2F661" 0 1900 50 H I L CNN "vault revision"
+F18 "yes" 0 2000 50 H I L CNN "imported"
+DRAW
+X VIN 3 100 0 100 R 40 40 1 1 W 
+X GND 1 500 -300 100 U 40 40 1 1 W 
+X VOUT 2 900 0 100 L 40 40 1 1 W 
+S 200 100 800 -200 1 1 0 f
+ENDDRAW
+ENDDEF
+#
+# End Library

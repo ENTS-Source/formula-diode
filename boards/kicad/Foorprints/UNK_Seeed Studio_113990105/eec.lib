@@ -1,0 +1,64 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# Seeed Studio 113990105
+#
+DEF 113990105 MD 0 40 Y Y 1 L N
+F0 "MD" 0 200 50 H V L CNN 
+F1 "113990105" 0 300 50 H V L CNN 
+F2 "Seeed_Studio-113990105-*" 0 400 50 H I L CNN 
+F3 "https://www.seeedstudio.com/NodeMCU-v2-Lua-based-ESP8266-development-kit.html" 0 500 50 H I L CNN 
+F4 "https://github.com/nodemcu/nodemcu-devkit-v1.0/tree/7f1d98b175b0ca0c843ffd93ef7b14461564a1e1" 0 600 50 H I L CNN "PIN OUT"
+F5 "No" 0 700 50 H I L CNN "automotive"
+F6 "UNK" 0 800 50 H I L CNN "category"
+F7 "Integrated Circuits (ICs)" 0 900 50 H I L CNN "device class L1"
+F8 "RF Semiconductors and Devices" 0 1000 50 H I L CNN "device class L2"
+F9 "Transceivers" 0 1100 50 H I L CNN "device class L3"
+F10 "NODEMCU V2 LUA BASED ESP8266 DEV" 0 1200 50 H I L CNN "digikey description"
+F11 "113990105-ND" 0 1300 50 H I L CNN "digikey part number"
+F12 "https://github.com/nodemcu/nodemcu-devkit-v1.0/tree/7f1d98b175b0ca0c843ffd93ef7b14461564a1e1" 0 1400 50 H I L CNN "footprint url"
+F13 "I2C,SPI,UART,Other" 0 1500 50 H I L CNN "interface"
+F14 "Yes" 0 1600 50 H I L CNN "lead free"
+F15 "1eab62af79efc3e5" 0 1700 50 H I L CNN "library id"
+F16 "Seeed Studio" 0 1800 50 H I L CNN "manufacturer"
+F17 "Nodemcu V2 Lua Based ESP8266 Dev" 0 1900 50 H I L CNN "mouser description"
+F18 "713-113990105" 0 2000 50 H I L CNN "mouser part number"
+F19 "10" 0 2100 50 H I L CNN "number of GPIO"
+F20 "WIFI_MODULE" 0 2200 50 H I L CNN "package"
+F21 "Yes" 0 2300 50 H I L CNN "rohs"
+DRAW
+X VIN 15 100 0 100 R 40 40 1 1 W 
+X Reserved 2 100 -1900 100 R 40 40 1 1 P 
+X Reserved 3 100 -2000 100 R 40 40 1 1 P 
+X D3 27 1400 -300 100 L 40 40 1 1 B 
+X D10 18 1400 -1000 100 L 40 40 1 1 B 
+X D4 26 1400 -400 100 L 40 40 1 1 B 
+X D9 19 1400 -900 100 L 40 40 1 1 B 
+X D2 28 1400 -200 100 L 40 40 1 1 B 
+X D1 29 1400 -100 100 L 40 40 1 1 B 
+X SD2 5 1400 -1200 100 L 40 40 1 1 B 
+X SD3 4 1400 -1300 100 L 40 40 1 1 B 
+X D6 22 1400 -600 100 L 40 40 1 1 B 
+X D7 21 1400 -700 100 L 40 40 1 1 B 
+X D5 23 1400 -500 100 L 40 40 1 1 B 
+X D8 20 1400 -800 100 L 40 40 1 1 B 
+X D0 30 1400 0 100 L 40 40 1 1 B 
+X 3V3 11 100 -200 100 R 40 40 1 1 W 
+X 3V3 16 100 -300 100 R 40 40 1 1 W 
+X 3V3 25 100 -400 100 R 40 40 1 1 W 
+X A0 1 100 -600 100 R 40 40 1 1 I 
+X CMD 7 100 -800 100 R 40 40 1 1 I 
+X EN 12 100 -1700 100 R 40 40 1 1 I 
+X SD0 8 100 -1000 100 R 40 40 1 1 B 
+X SD1 6 100 -1100 100 R 40 40 1 1 B 
+X RST 13 100 -1500 100 R 40 40 1 1 I 
+X CLK 9 100 -1300 100 R 40 40 1 1 I C
+X GND 10 1400 -1700 100 L 40 40 1 1 W 
+X GND 14 1400 -1800 100 L 40 40 1 1 W 
+X GND 17 1400 -1900 100 L 40 40 1 1 W 
+X GND 24 1400 -2000 100 L 40 40 1 1 W 
+S 200 100 1300 -2100 1 1 0 f
+ENDDRAW
+ENDDEF
+#
+# End Library

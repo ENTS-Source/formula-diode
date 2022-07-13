@@ -1,0 +1,9 @@
+Manufacturer=Adafruit
+PartNumber=2590
+PartCategory=Integrated Circuit
+PackageCategory=Other
+PinCount=32
+Version=1.2
+Released=2018-05-17 08:07:59
+Downloaded=2022-07-11 19:05:24
+3D=Y

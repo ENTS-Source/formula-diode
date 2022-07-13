@@ -80,6 +80,10 @@ void scanForPlayers() {
   }
 }
 
+// =========================
+// ==== HTTP BELOW HERE ====
+// =========================
+
 void markLapCompleted(int playerNum, int lap, unsigned long ms) {
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);

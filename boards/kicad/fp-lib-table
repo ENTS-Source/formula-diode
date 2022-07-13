@@ -1,0 +1,10 @@
+(fp_lib_table
+  (lib (name "Foorprints")(type "KiCad")(uri "${KIPRJMOD}/Foorprints")(options "")(descr ""))
+  (lib (name "KiCad")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/LIB_54601-908WPLF/54601-908WPLF/KiCad")(options "")(descr ""))
+  (lib (name "Metro")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/LIB_Metro/2590/KiCad")(options "")(descr ""))
+  (lib (name "Node")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/UNK_Seeed Studio_113990105/eec.pretty")(options "")(descr ""))
+  (lib (name "Buttons")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/Buttons/Buttons.pretty")(options "")(descr ""))
+  (lib (name "1017492")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/LIB_1017492/1017492/KiCad")(options "")(descr ""))
+  (lib (name "LED_Racer_parts")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/Custom/LED_Racer_parts.pretty")(options "")(descr ""))
+  (lib (name "1017491")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/LIB_1017491/1017491/KiCad")(options "")(descr ""))
+)

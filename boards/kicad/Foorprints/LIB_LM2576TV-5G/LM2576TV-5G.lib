@@ -1,0 +1,28 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model LM2576TV-5G
+#/224738/899614/2.49/5/3/Integrated Circuit
+DEF LM2576TV-5G IC 0 30 Y Y 1 F N
+F0 "IC" 1350 300 50 H V L CNN
+F1 "LM2576TV-5G" 1350 200 50 H V L CNN
+F2 "TO170P457X1022X2349-5P" 1350 100 50 H I L CNN
+F3 "http://www.onsemi.com/pub/Collateral/LM2576-D.PDF" 1350 0 50 H I L CNN
+F4 "" 1350 -100 50 H I L CNN "Description"
+F5 "4.572" 1350 -200 50 H I L CNN "Height"
+F6 "onsemi" 1350 -300 50 H I L CNN "Manufacturer_Name"
+F7 "LM2576TV-5G" 1350 -400 50 H I L CNN "Manufacturer_Part_Number"
+F8 "863-LM2576TV-5G" 1350 -500 50 H I L CNN "Mouser Part Number"
+F9 "https://www.mouser.co.uk/ProductDetail/onsemi/LM2576TV-5G?qs=2OtswVQKCOFWqcas%2FMqA%2Fw%3D%3D" 1350 -600 50 H I L CNN "Mouser Price/Stock"
+F10 "LM2576TV-5G" 1350 -700 50 H I L CNN "Arrow Part Number"
+F11 "https://www.arrow.com/en/products/lm2576tv-5g/on-semiconductor?region=nac" 1350 -800 50 H I L CNN "Arrow Price/Stock"
+DRAW
+X VIN 1 0 0 200 R 50 50 0 0 I
+X OUTPUT 2 0 -100 200 R 50 50 0 0 O
+X GROUND 3 0 -200 200 R 50 50 0 0 P
+X FEEDBACK 4 1500 0 200 L 50 50 0 0 P
+X ~ON~/OFF 5 1500 -100 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 1300 100 1300 -300 200 -300 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

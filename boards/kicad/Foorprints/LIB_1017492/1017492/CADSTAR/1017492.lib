@@ -1,0 +1,18 @@
+.1017492 :1 ;PCB terminal block, nominal current: 24 A, rated voltage (III/2): 400 V, nominal cross section: 2.5 mm?, Number of potentials: 3, Number of rows: 1, Number of positions per row: 3, product range: TDPT 2,5/..-SC, pitch: 5.08 mm, connection method: Screw connection with tension sleeve, mounting: Wave soldering, conductor/PCB connection direction: 0 ?, color: green, Pin layout: Linear double pinning, Solder pin [P]: 3.5 mm, type of packaging: packed in cardboard
+"1017492"
+*STM J
+*NGS
+*PLB 1="1.1" 2="1.2" 3="2.1" 4="2.2" 5="3.1" 6="3.2"
+*MXP 6
+*DFN 1017492
+~!Manufacturer_Name (Phoenix Contact)
+~!Manufacturer_Part_Number (1017492)
+~!Mouser Part Number (651-1017492)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Phoenix-Contact/1017492?qs=F5EMLAvA7ID9c4m34USmPg%3D%3D)
+~!Arrow Part Number (1017492)
+~!Link Arrow Price/Stock (https://www.arrow.com/en/products/1017492/phoenix-contact)
+~!Link Datasheet (http://www.phoenixcontact.com/de/produkte/1017492/pdf)
+~!Height (19.2mm)
+~!3D_Model (1017492)
+"1017492"
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 6.1!U 

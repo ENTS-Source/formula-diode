@@ -1,0 +1,11 @@
+(sym_lib_table
+  (lib (name "NodeMCU")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/UNK_Seeed Studio_113990105/eec.lib")(options "")(descr ""))
+  (lib (name "LD1117")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/IC_STMicroelectronics_LD1117V33C/eec.lib")(options "")(descr ""))
+  (lib (name "MCP1825")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/IC_Microchip_MCP1825S-3302E_AB/eec.lib")(options "")(descr ""))
+  (lib (name "54601-908WPLF")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/LIB_54601-908WPLF/54601-908WPLF/KiCad/54601-908WPLF.lib")(options "")(descr ""))
+  (lib (name "2022-07-07_22-31-29")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/ul_TN0104N3-G/KiCAD/2022-07-07_22-31-29/2022-07-07_22-31-29.lib")(options "")(descr ""))
+  (lib (name "Metro")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/LIB_Metro/2590/KiCad/2590.lib")(options "")(descr ""))
+  (lib (name "COM12986")(type "KiCad")(uri "${KIPRJMOD}/Foorprints/COM12986/COM12986.kicad_sym")(options "")(descr ""))
+  (lib (name "1017492")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/LIB_1017492/1017492/KiCad/1017492.lib")(options "")(descr ""))
+  (lib (name "1017491")(type "Legacy")(uri "${KIPRJMOD}/Foorprints/LIB_1017491/1017491/KiCad/1017491.lib")(options "")(descr ""))
+)
