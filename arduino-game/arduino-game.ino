@@ -1,88 +1,65 @@
 #include <FastLED.h>
-#include "PlayerController.h"
-#include "Track.h"
-#include "Networking.h"
-#include "Config.h"
-#include "GameNet.h"
 
 // Need to import this here so we don't try to import it a thousand times.
 #include <AsyncHTTPRequest_Generic.h>
 
 // NodeMCU / ESP8266
 
-// Note that LED_STRIP_PIN is set in Track.h
-
-#define START_BTN_PIN     D5
 #define NOT_CONNECTED_PIN D6
-
-CRGB PLAYER1_COLOR = CRGB::Blue;
-CRGB PLAYER2_COLOR = CRGB::Red;
-CRGB PLAYER3_COLOR = CRGB::Green;
-CRGB PLAYER4_COLOR = CRGB::Orange;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
 CRGB TRAFFIC_GREEN = CRGB(0, 132, 5);
 
-Button startBtn(START_BTN_PIN);
-Config* config;
-Track* track;
-Networking* networking;
-GameNet* gamenet;
-PlayerController* players[I2C_PLAYERS];
+CRGB colors[I2C_PLAYERS] = {
+  CRGB::Blue,
+  CRGB::Red,
+  CRGB::Green,
+  CRGB::Orange,
+}
+PlayerState players[I2C_PLAYERS] = {
+  PlayerState,
+  PlayerState,
+  PlayerState,
+  PlayerState,
+};
 
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
   Serial.begin(115200);
+  confSetup();
+  gnetSetup();
+  trakSetup();
+  netSetup();
 
-  players[0] = new PlayerController(PLAYER1_COLOR);
-  players[1] = new PlayerController(PLAYER2_COLOR);
-  players[2] = new PlayerController(PLAYER3_COLOR);
-  players[3] = new PlayerController(PLAYER4_COLOR);
+  for (int i = 0; i < I2C_PLAYERS; i++) {
+    playerReset(players[i]);
+    players[i].color = colors[i];
+  }
 
-  config = new Config();
-  track = new Track(&startBtn, players, config);
-  networking = new Networking(track, config); // networking will read/write config for us
-  gamenet = new GameNet(D2, D1);
-
-  scanForPlayers();
+  gnetScan();
   updatePlayerIds();
 }
 
 void loop() {
-  networking->update();
-  bool doReset = track->update();
+  bool doReset = trakUpdate();
   if (doReset) {
-    scanForPlayers();
-    gamenet->resetAll();
+    gnetScan();
+    gnetResetAll();
     updatePlayerIds();
   }
-  gamenet->update();
-
-  for (int i = 0; i < I2C_PLAYERS; i++) {
-    byte state[TOHOST_LENGTH];
-    if (gamenet->populateState(i, state)) {
-      players[i]->recordPresses(state[0]);
-    }
-  }
+  gnetUpdate();
 }
 
 void updatePlayerIds() {
   for (int i = 0; i < I2C_PLAYERS; i++) {
-    gamenet->updateColor(i, players[i]->color.r, players[i]->color.g, players[i]->color.b);
+    gnetUpdateColor(i, players[i].color.r, players[i].color.g, players[i].color.b);
   }
 }
 
-void scanForPlayers() {
-  gamenet->scan();
-  for (int i = 0; i < I2C_PLAYERS; i++) {
-    track->setPlayerState(i, gamenet->isPlayerConnected(i));
-  }
-}
-
-// =========================
-// ==== HTTP BELOW HERE ====
-// =========================
+// ---------------------------------------------------------------
+// ---- HTTP
+// ===============================================================
 
 void markLapCompleted(int playerNum, int lap, unsigned long ms) {
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
