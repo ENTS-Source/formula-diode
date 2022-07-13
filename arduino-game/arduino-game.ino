@@ -8,8 +8,6 @@
 
 // NodeMCU / ESP8266
 
-#define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
-#define CONF_SB_IP_LEN 16 // string, fixed length
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
 #define SCL_PIN D1
@@ -21,6 +19,8 @@
 #define STRIP_LENGTH 50
 #define WINNER_SHOWN_MS 2500
 
+#define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
+#define CONF_SB_IP_LEN 16 // string, fixed length
 #define NOT_CONNECTED_PIN D6
 #define CONF_EEPROM_SIZE 512
 #define NO_SB_IP "none"
@@ -43,6 +43,21 @@
 #define FIELD_SCOREBOARD_NAME "scoreboard"
 #define FIELD_NUMLEDS_NAME "numLeds"
 
+struct PlayerState {
+  float velocity;
+  float position;
+  int location; // int position
+  int length;
+  CRGB color;
+
+  int unhandledPresses;
+  long lastPhysics;
+
+  long finishMs;
+  long lastLapFinishMs;
+  bool isConnected;
+};
+
 String scoreboardIp;
 CRGB leds[STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
@@ -50,6 +65,9 @@ long lightsStartMs = 0;
 long endMs = 0;
 int winnerNum = NO_WINNER;
 bool inGame = false;
+bool btnDownTrigger = false;
+bool btnUpTrigger = false;
+bool btnPressed = false;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -60,12 +78,12 @@ CRGB colors[I2C_PLAYERS] = {
   CRGB::Red,
   CRGB::Green,
   CRGB::Orange,
-}
+};
 PlayerState players[I2C_PLAYERS] = {
-  PlayerState,
-  PlayerState,
-  PlayerState,
-  PlayerState,
+  PlayerState{},
+  PlayerState{},
+  PlayerState{},
+  PlayerState{},
 };
 
 void setup() {
@@ -105,22 +123,7 @@ void updatePlayerIds() {
 // ---- PLAYERS
 // ===============================================================
 
-struct PlayerState {
-  float velocity;
-  float position;
-  int location; // int position
-  int length;
-  CRGB color;
-
-  int unhandledPresses;
-  long lastPhysics;
-
-  long finishMs;
-  long lastLapFinishMs;
-  bool isConnected;
-};
-
-void playerPhysics(PlayerState player) {
+void playerPhysics(PlayerState &player) {
   if (!player.isConnected) {
     return;
   }
@@ -151,7 +154,7 @@ void playerPhysics(PlayerState player) {
   player.location = round(player.position); // int location
 }
 
-void playerReset(PlayerState player) {
+void playerReset(PlayerState &player) {
   player.length = 3;
   player.position = 0;
   player.location = 0;
@@ -180,12 +183,12 @@ bool trakUpdate() {
   btnUpdate();
 
   if (!inGame) {
-    if (winner != NO_WINNER) {
+    if (winnerNum != NO_WINNER) {
       long timeDiff = millis() - endMs;
       if (timeDiff < WINNER_SHOWN_MS) {
         trakDrawWinner();
       } else {
-        winner = NO_WINNER;
+        winnerNum = NO_WINNER;
         endMs = 0;
       }
     } else if (lightsStartMs > 0) {
@@ -284,6 +287,7 @@ void trakUpdatePlayers() {
   }
 
   if (allDone) {
+    Serial.println("@@ DEBUG -- All Done");
     inGame = false;
     endMs = millis();
     winnerNum = NO_WINNER;
@@ -295,6 +299,8 @@ void trakUpdatePlayers() {
         winnerNum = i;
       }
     }
+    Serial.print("@@ DEBUG -- Winner: ");
+    Serial.println(winnerNum);
     markGameEnd(winnerNum);
   }
 }
@@ -334,7 +340,7 @@ void trakDrawPlayers() {
       leds[startPos + j] = CRGB(
         leds[startPos + j].r + players[i].color.r,
         leds[startPos + j].g + players[i].color.g,
-        leds[startPos + j].b + players[i].color.b,
+        leds[startPos + j].b + players[i].color.b
       );
     }
   }
@@ -343,10 +349,10 @@ void trakDrawPlayers() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     int mapHeight = positionMap[i];
     if (mapHeight > 1) {
-      leds = CRGB(
+      leds[i] = CRGB(
         leds[i].r / mapHeight,
         leds[i].g / mapHeight,
-        leds[i].b / mapHeight,
+        leds[i].b / mapHeight
       );
     }
   }
@@ -381,7 +387,7 @@ void gnetUpdate() {
       }
 
       if (pos == 0) {
-        players[i].unhandledPresses = b;
+        players[i].unhandledPresses += b;
       } else if (pos == 1) {
         // Secondary button not used
       }
@@ -399,7 +405,7 @@ void gnetScan() {
     if (err == 0) {
       Serial.print(i);
       Serial.println(" is connected to I2C");
-      gnetPlayers[i].isConnected = true;
+      players[i].isConnected = true;
     } else {
       Serial.print(i);
       Serial.print(" failed to connect on I2C with error ");
@@ -444,9 +450,6 @@ void gnetResetAll() {
 int btnLastState = BTN_OPEN;
 int btnLastRead = BTN_OPEN;
 int btnLastReadMs = 0;
-bool btnDownTrigger = false;
-bool btnUpTrigger = false;
-bool btnPressed = false;
 
 void btnUpdate() {
   btnDownTrigger = false;
@@ -457,10 +460,10 @@ void btnUpdate() {
     btnLastRead = val;
     btnLastReadMs = millis();
   }
-  if ((millis() - lastReadMs) > BTN_DEBOUNCE_MS) {
+  if ((millis() - btnLastReadMs) > BTN_DEBOUNCE_MS) {
     if (val != btnLastState) {
       btnLastState = val;
-      if (lastState == BTN_CLOSED) {
+      if (btnLastState == BTN_CLOSED) {
         btnPressed = true;
         btnDownTrigger = true;
       } else {
@@ -645,6 +648,7 @@ void netSetup() {
 
 void netSaveWmParams() {
   scoreboardIp = String(scoreboardIPField->getValue());
+  Serial.println("New scoreboard IP to write: " + scoreboardIp);
   confWrite();
 }
 
@@ -652,20 +656,28 @@ void netSaveWmParams() {
 // ---- HTTP
 // ===============================================================
 
-void markLapCompleted(int playerNum, int lap, unsigned long ms) {
+void markLapCompleted(int playerNum, int lap, long ms) {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms)).c_str())) {
+  Serial.println("@@ DEBUG -- " + scoreboardIp + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms));
+  if (!request->open("POST", (scoreboardIp + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms)).c_str())) {
     Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
     return;
   }
   request->send();
 }
 
-void markAllLapsCompleted(int playerNum, unsigned long ms) {
+void markAllLapsCompleted(int playerNum, long ms) {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms)).c_str())) {
+  Serial.println("@@ DEBUG -- " + scoreboardIp + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms));
+  if (!request->open("POST", (scoreboardIp + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms)).c_str())) {
     Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
     return;
   }
@@ -673,9 +685,12 @@ void markAllLapsCompleted(int playerNum, unsigned long ms) {
 }
 
 void markDNF(int playerNum) {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/player_dnf?player=" + String(playerNum)).c_str())) {
+  if (!request->open("POST", (scoreboardIp + ":20304/player_dnf?player=" + String(playerNum)).c_str())) {
     Serial.println("ERROR: markDNF is a BAD REQUEST");
     return;
   }
@@ -683,9 +698,12 @@ void markDNF(int playerNum) {
 }
 
 void markGameEnd(int winner) {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/game_end?winner=" + String(winner)).c_str())) {
+  if (!request->open("POST", (scoreboardIp + ":20304/game_end?winner=" + String(winner)).c_str())) {
     Serial.println("ERROR: markGameEnd is a BAD REQUEST");
     return;
   }
@@ -693,9 +711,12 @@ void markGameEnd(int winner) {
 }
 
 void markGameStart(int numPlayers) {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/game_start?players=" + String(numPlayers)).c_str())) {
+  if (!request->open("POST", (scoreboardIp + ":20304/game_start?players=" + String(numPlayers)).c_str())) {
     Serial.println("ERROR: markGameStart is a BAD REQUEST");
     return;
   }
@@ -703,10 +724,13 @@ void markGameStart(int numPlayers) {
 }
 
 void markGameIntro() {
+  if (scoreboardIp == NO_SB_IP) {
+    return;
+  }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (config->scoreboardIP + ":20304/game_intro").c_str())) {
-    Serial.println("ERROR: markGameStart is a BAD REQUEST");
+  if (!request->open("POST", (scoreboardIp + ":20304/game_intro").c_str())) {
+    Serial.println("ERROR: markGameIntro is a BAD REQUEST");
     return;
   }
   request->send();
