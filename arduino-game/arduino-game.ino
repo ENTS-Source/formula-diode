@@ -271,27 +271,11 @@ void trakUpdatePlayers() {
     int newLaps = players[i].location / STRIP_LENGTH;
 
     if (newLaps != oldLaps) {
-      Serial.print("@@ Calculating lap time for player: ");
-      Serial.println(i);
       long lastLapMs = players[i].lastLapFinishMs;
-      Serial.print("@@ Debug -- Game start time: ");
-      Serial.println(startTimeMs);
-      Serial.print("@@ Debug - Free Heap: ");
-      Serial.println(ESP.getFreeHeap());
       if (lastLapMs == 0) {
-        Serial.print("@@ Using game start time as last lap finish time: ");
-        Serial.println(startTimeMs);
         lastLapMs = startTimeMs;
-      } else {
-        Serial.print("@@ Using last lap finish time: ");
-        Serial.println(lastLapMs);
       }
       long lapTime = millis();
-      Serial.print("@@ Current time: ");
-      Serial.println(lapTime);
-      Serial.print("@@ Lap time: ");
-      Serial.println(lapTime - lastLapMs);
-      Serial.println("-------------------------------------------------------------------------");
       markLapCompleted(i, newLaps, lapTime - lastLapMs);
       players[i].lastLapFinishMs = lapTime;
     }
@@ -305,7 +289,6 @@ void trakUpdatePlayers() {
   }
 
   if (allDone) {
-    Serial.println("@@ DEBUG -- All Done");
     inGame = false;
     endMs = millis();
     winnerNum = NO_WINNER;
@@ -317,8 +300,6 @@ void trakUpdatePlayers() {
         winnerNum = i;
       }
     }
-    Serial.print("@@ DEBUG -- Winner: ");
-    Serial.println(winnerNum);
     markGameEnd(winnerNum);
   }
 }
@@ -698,8 +679,6 @@ void markLapCompleted(int playerNum, int lap, long ms) {
   }
   char url[128];
   sprintf(url, "http://%s:20304/lap_done?player=%d&lap=%d&time=%d", scoreboardIp, playerNum, lap, ms);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
     return;
@@ -718,8 +697,6 @@ void markAllLapsCompleted(int playerNum, long ms) {
   }
   char url[128];
   sprintf(url, "http://%s:20304/player_done?player=%d&time=%d", scoreboardIp, playerNum, ms);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
     return;
@@ -738,8 +715,6 @@ void markDNF(int playerNum) {
   }
   char url[128];
   sprintf(url, "http://%s:20304/player_dnf?player=%d", scoreboardIp, playerNum);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markDNF is a BAD REQUEST");
     return;
@@ -758,8 +733,6 @@ void markGameEnd(int winner) {
   }
   char url[128];
   sprintf(url, "http://%s:20304/game_end?winner=%d", scoreboardIp, winner);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameEnd is a BAD REQUEST");
     return;
@@ -778,8 +751,6 @@ void markGameStart(int numPlayers) {
   }
   char url[128];
   sprintf(url, "http://%s:20304/game_start?players=%d", scoreboardIp, numPlayers);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameStart is a BAD REQUEST");
     return;
@@ -798,8 +769,6 @@ void markGameIntro() {
   }
   char url[64];
   sprintf(url, "http://%s:20304/game_intro", scoreboardIp);
-  Serial.print("@@ DEBUG -- ");
-  Serial.println(url);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameIntro is a BAD REQUEST");
     return;
