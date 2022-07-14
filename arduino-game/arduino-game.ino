@@ -2,7 +2,6 @@
 #include <EEPROM.h>
 #include <Regexp.h>
 #include <AsyncHTTPRequest_Generic.h>
-#include <ESP8266WiFi.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 
@@ -355,11 +354,16 @@ void trakDrawPlayers() {
 
     int startPos = players[i].location % STRIP_LENGTH;
     for (int j = 0; j < players[i].length; j++) {
-      positionMap[startPos + j]++;
-      leds[startPos + j] = CRGB(
-        leds[startPos + j].r + players[i].color.r,
-        leds[startPos + j].g + players[i].color.g,
-        leds[startPos + j].b + players[i].color.b
+      int targetLoc = startPos + j;
+      int maxStripPos = STRIP_LENGTH * STRIP_COUNT;
+      if (targetLoc >= maxStripPos) {
+        targetLoc = (targetLoc - maxStripPos); // overrun
+      }
+      positionMap[targetLoc]++;
+      leds[targetLoc] = CRGB(
+        leds[targetLoc].r + players[i].color.r,
+        leds[targetLoc].g + players[i].color.g,
+        leds[targetLoc].b + players[i].color.b
       );
     }
   }
