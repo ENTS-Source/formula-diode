@@ -58,7 +58,7 @@ struct PlayerState {
   bool isConnected;
 };
 
-String scoreboardIp;
+char scoreboardIp[CONF_SB_IP_LEN];
 CRGB leds[STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
 long lightsStartMs = 0;
@@ -489,29 +489,32 @@ void confSetup() {
 }
 
 void confRead() {
-  scoreboardIp = confReadString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN);
+  confReadString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, scoreboardIp);
 
   // Validation
   MatchState ms;
-  char sbipArr[CONF_SB_IP_LEN];
-  scoreboardIp.toCharArray(sbipArr, CONF_SB_IP_LEN);
-  ms.Target(sbipArr, CONF_SB_IP_LEN);
+  ms.Target(scoreboardIp, CONF_SB_IP_LEN);
   if (ms.Match("[0-9]+.[0-9]+.[0-9]+.[0-9]+") != REGEXP_MATCHED) {
-    Serial.println("Invalid scoreboard IP: " + scoreboardIp);
-    scoreboardIp = NO_SB_IP;
+    Serial.print("Invalid scoreboard IP: ");
+    Serial.println(scoreboardIp);
+    strcpy(scoreboardIp, NO_SB_IP);
   }
-  scoreboardIp.trim();
-  if (scoreboardIp.length() <= 0) {
+  String tmpStr = String(scoreboardIp);
+  tmpStr.trim();
+  if (tmpStr.length() <= 0) {
     Serial.println("Scoreboard IP was empty - resetting");
-    scoreboardIp = NO_SB_IP;
+    strcpy(scoreboardIp, NO_SB_IP);
+  } else {
+    strcpy(scoreboardIp, tmpStr.c_str());
   }
 
   // Debug
-  Serial.println("Scoreboard IP: " + scoreboardIp);
+  Serial.print("Scoreboard IP: ");
+  Serial.println(scoreboardIp);
 }
 
 void confWrite() {
-  String sbip = scoreboardIp;
+  String sbip = String(scoreboardIp);
 
   // Truncate if needed
   if (sbip.length() > CONF_SB_IP_LEN) {
@@ -526,26 +529,26 @@ void confWrite() {
     sbip += " "; // add empty space
   }
 
-  confWriteString(CONF_SB_IP_ADDR, sbip);
+  char arr[CONF_SB_IP_LEN];
+  sbip.toCharArray(arr, CONF_SB_IP_LEN);
+  confWriteString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, arr);
   EEPROM.commit();
   confRead(); // read back for validation
 }
 
 void confClear() {
-  scoreboardIp = "";
+  strcpy(scoreboardIp, "");
   confWrite();
 }
 
-String confReadString(int addr, int len) {
-  String val = "";
+void confReadString(int addr, int len, char str[]) {
   for (int i = 0; i < len; i++) {
-    val += char(confReadByte(addr + i));
+    str[i] = char(confReadByte(addr + i));
   }
-  return val;
 }
 
-void confWriteString(int addr, String val) {
-  for (int i = 0; i < val.length(); i++) {
+void confWriteString(int addr, int len, char val[]) {
+  for (int i = 0; i < len; i++) {
     confWriteByte(addr + i, val[i]);
   }
 }
@@ -647,8 +650,9 @@ void netSetup() {
 }
 
 void netSaveWmParams() {
-  scoreboardIp = String(scoreboardIPField->getValue());
-  Serial.println("New scoreboard IP to write: " + scoreboardIp);
+  strcpy(scoreboardIp, scoreboardIPField->getValue());
+  Serial.print("New scoreboard IP to write: ");
+  Serial.println(scoreboardIp);
   confWrite();
 }
 
@@ -657,13 +661,16 @@ void netSaveWmParams() {
 // ===============================================================
 
 void markLapCompleted(int playerNum, int lap, long ms) {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  Serial.println("@@ DEBUG -- " + scoreboardIp + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms));
-  if (!request->open("POST", (scoreboardIp + ":20304/lap_done?player=" + String(playerNum) + "&lap=" + String(lap) + "&time=" + String(ms)).c_str())) {
+  char url[128];
+  sprintf(url, "%s:20304/lap_done?player=%d&lap=%d&time=%d", scoreboardIp, playerNum, lap, ms);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
     return;
   }
@@ -671,13 +678,16 @@ void markLapCompleted(int playerNum, int lap, long ms) {
 }
 
 void markAllLapsCompleted(int playerNum, long ms) {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  Serial.println("@@ DEBUG -- " + scoreboardIp + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms));
-  if (!request->open("POST", (scoreboardIp + ":20304/player_done?player=" + String(playerNum) + "&time=" + String(ms)).c_str())) {
+  char url[128];
+  sprintf(url, "%s:20304/player_done?player=%d&time=%d", scoreboardIp, playerNum, ms);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
     return;
   }
@@ -685,12 +695,16 @@ void markAllLapsCompleted(int playerNum, long ms) {
 }
 
 void markDNF(int playerNum) {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (scoreboardIp + ":20304/player_dnf?player=" + String(playerNum)).c_str())) {
+  char url[128];
+  sprintf(url, "%s:20304/player_dnf?player=%d", scoreboardIp, playerNum);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markDNF is a BAD REQUEST");
     return;
   }
@@ -698,12 +712,16 @@ void markDNF(int playerNum) {
 }
 
 void markGameEnd(int winner) {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (scoreboardIp + ":20304/game_end?winner=" + String(winner)).c_str())) {
+  char url[128];
+  sprintf(url, "%s:20304/game_end?winner=%d", scoreboardIp, winner);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markGameEnd is a BAD REQUEST");
     return;
   }
@@ -711,12 +729,16 @@ void markGameEnd(int winner) {
 }
 
 void markGameStart(int numPlayers) {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (scoreboardIp + ":20304/game_start?players=" + String(numPlayers)).c_str())) {
+  char url[128];
+  sprintf(url, "%s:20304/game_start?players=%d", scoreboardIp, numPlayers);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markGameStart is a BAD REQUEST");
     return;
   }
@@ -724,12 +746,16 @@ void markGameStart(int numPlayers) {
 }
 
 void markGameIntro() {
-  if (scoreboardIp == NO_SB_IP) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
   AsyncHTTPRequest* request = new AsyncHTTPRequest();
   request->onReadyStateChange(ignoreCallback);
-  if (!request->open("POST", (scoreboardIp + ":20304/game_intro").c_str())) {
+  char url[64];
+  sprintf(url, "%s:20304/game_intro", scoreboardIp);
+  Serial.print("@@ DEBUG -- ");
+  Serial.println(url);
+  if (!request->open("POST", url)) {
     Serial.println("ERROR: markGameIntro is a BAD REQUEST");
     return;
   }
