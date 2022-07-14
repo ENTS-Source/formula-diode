@@ -499,13 +499,19 @@ void confRead() {
     Serial.println(scoreboardIp);
     strcpy(scoreboardIp, NO_SB_IP);
   }
-  String tmpStr = String(scoreboardIp);
-  tmpStr.trim();
-  if (tmpStr.length() <= 0) {
+  char str2[CONF_SB_IP_LEN] = "";
+  int j = 0;
+  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
+    char c = scoreboardIp[i];
+    if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
+      str2[j] = c;
+      j++;
+    }
+  }
+  strcpy(scoreboardIp, str2);
+  if (strcmp(scoreboardIp, "") == 0) {
     Serial.println("Scoreboard IP was empty - resetting");
     strcpy(scoreboardIp, NO_SB_IP);
-  } else {
-    strcpy(scoreboardIp, tmpStr.c_str());
   }
 
   // Debug
@@ -514,24 +520,23 @@ void confRead() {
 }
 
 void confWrite() {
-  String sbip = String(scoreboardIp);
-
-  // Truncate if needed
-  if (sbip.length() > CONF_SB_IP_LEN) {
-    sbip = "";
-    for (int i = 0; i < CONF_SB_IP_LEN; i++) {
-      sbip += scoreboardIp[i];
+  char str2[CONF_SB_IP_LEN] = "";
+  int j = 0;
+  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
+    char c = scoreboardIp[i];
+    if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
+      str2[j] = c;
+      j++;
+    }
+  }
+  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
+    char c = str2[i];
+    if (c <= 48 && c >= 57 && c != 46) { // not a number or full stop
+      str2[i] = ' ';
     }
   }
 
-  // Pad if needed
-  while(sbip.length() < CONF_SB_IP_LEN) {
-    sbip += " "; // add empty space
-  }
-
-  char arr[CONF_SB_IP_LEN];
-  sbip.toCharArray(arr, CONF_SB_IP_LEN);
-  confWriteString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, arr);
+  confWriteString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, str2);
   EEPROM.commit();
   confRead(); // read back for validation
 }
@@ -593,11 +598,10 @@ void netSetup() {
   }
 
   confRead();
-  String sbip = scoreboardIp;
-  if (sbip == "") {
-    sbip = NO_SB_IP;
+  if (strcmp(scoreboardIp, "") == 0) {
+    strcpy(scoreboardIp, NO_SB_IP);
   }
-  scoreboardIPField = new WiFiManagerParameter(FIELD_SCOREBOARD_NAME, "Scoreboard IP", sbip.c_str(), CONF_SB_IP_LEN, "placeholder=\"none\"");
+  scoreboardIPField = new WiFiManagerParameter(FIELD_SCOREBOARD_NAME, "Scoreboard IP", scoreboardIp, CONF_SB_IP_LEN, "placeholder=\"none\"");
 
   wm.addParameter(scoreboardIPField);
   wm.setSaveParamsCallback(netSaveWmParams);
