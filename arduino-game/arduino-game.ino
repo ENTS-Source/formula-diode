@@ -42,6 +42,7 @@
 #define NW_STATUS_LED 4
 #define FIELD_SCOREBOARD_NAME "scoreboard"
 #define FIELD_NUMLEDS_NAME "numLeds"
+#define REQUESTS_IN_POOL 12
 
 struct PlayerState {
   float velocity;
@@ -85,6 +86,20 @@ PlayerState players[I2C_PLAYERS] = {
   PlayerState{},
   PlayerState{},
 };
+AsyncHTTPRequest reqPool[REQUESTS_IN_POOL] = {
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+};
+int reqPoolIdx = 0;
 
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
@@ -93,6 +108,10 @@ void setup() {
   gnetSetup();
   trakSetup();
   netSetup();
+
+  for (int i = 0; i < REQUESTS_IN_POOL; i++) {
+    reqPool[i].onReadyStateChange(ignoreCallback);
+  }
 
   for (int i = 0; i < I2C_PLAYERS; i++) {
     playerReset(players[i]);
@@ -668,102 +687,120 @@ void markLapCompleted(int playerNum, int lap, long ms) {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[128];
-  sprintf(url, "%s:20304/lap_done?player=%d&lap=%d&time=%d", scoreboardIp, playerNum, lap, ms);
+  sprintf(url, "http://%s:20304/lap_done?player=%d&lap=%d&time=%d", scoreboardIp, playerNum, lap, ms);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void markAllLapsCompleted(int playerNum, long ms) {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[128];
-  sprintf(url, "%s:20304/player_done?player=%d&time=%d", scoreboardIp, playerNum, ms);
+  sprintf(url, "http://%s:20304/player_done?player=%d&time=%d", scoreboardIp, playerNum, ms);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void markDNF(int playerNum) {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[128];
-  sprintf(url, "%s:20304/player_dnf?player=%d", scoreboardIp, playerNum);
+  sprintf(url, "http://%s:20304/player_dnf?player=%d", scoreboardIp, playerNum);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markDNF is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void markGameEnd(int winner) {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[128];
-  sprintf(url, "%s:20304/game_end?winner=%d", scoreboardIp, winner);
+  sprintf(url, "http://%s:20304/game_end?winner=%d", scoreboardIp, winner);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameEnd is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void markGameStart(int numPlayers) {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[128];
-  sprintf(url, "%s:20304/game_start?players=%d", scoreboardIp, numPlayers);
+  sprintf(url, "http://%s:20304/game_start?players=%d", scoreboardIp, numPlayers);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameStart is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void markGameIntro() {
   if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
     return;
   }
-  AsyncHTTPRequest* request = new AsyncHTTPRequest();
-  request->onReadyStateChange(ignoreCallback);
+  int reqIdx = reqPoolIdx;
+  reqPoolIdx++;
+  if (reqPoolIdx >= REQUESTS_IN_POOL) {
+    reqPoolIdx = 0;
+  }
   char url[64];
-  sprintf(url, "%s:20304/game_intro", scoreboardIp);
+  sprintf(url, "http://%s:20304/game_intro", scoreboardIp);
   Serial.print("@@ DEBUG -- ");
   Serial.println(url);
-  if (!request->open("POST", url)) {
+  if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameIntro is a BAD REQUEST");
     return;
   }
-  request->send();
+  reqPool[reqIdx].send();
 }
 
 void ignoreCallback(void* optParm, AsyncHTTPRequest* request, int readyState) {
