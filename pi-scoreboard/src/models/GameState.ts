@@ -42,7 +42,7 @@ export class GameState {
                     }
                     break;
                 case 'lap_done': {
-                    if (this.phase !== "running") return;
+                    if (this.phase !== "running" && this.phase !== "end") return;
                     const playerN = Number(qs.get('player'));
                     const lap = Number(qs.get('lap')) - 1;
                     const time = Number(qs.get('time'));
@@ -56,7 +56,7 @@ export class GameState {
                     break;
                 }
                 case 'player_done': {
-                    if (this.phase !== "running") return;
+                    if (this.phase !== "running" && this.phase !== "end") return;
                     const playerN = Number(qs.get('player'));
                     const time = Number(qs.get('time'));
                     if (!this.players[playerN]) return;
@@ -67,7 +67,7 @@ export class GameState {
                     break;
                 }
                 case 'game_end': {
-                    if (this.phase !== "running") return;
+                    if (this.phase !== "running" && this.phase !== "end") return;
                     this.phase = "end";
                     const winner = Number(qs.get('winner'));
                     if (winner < 0) {
