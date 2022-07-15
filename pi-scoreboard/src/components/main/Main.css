@@ -1,14 +1,30 @@
 @import './fonts.css';
 
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /*background: repeating-linear-gradient(45deg,*/
+    /*        #2b2b2b 0%,*/
+    /*        #2b2b2b 10%,*/
+    /*        #222222 0%,*/
+    /*        #222222 50%) 0 / 15px 15px;*/
+    background-image: url(./bg.jpg);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.4;
+    z-index: -1;
+}
+
 body {
     background-color: #222222;
-    background: repeating-linear-gradient(45deg,
-            #2b2b2b 0%,
-            #2b2b2b 10%,
-            #222222 0%,
-            #222222 50%) 0 / 15px 15px;
-    font-family: Iceland;
+    font-family: Audiowide;
     color: #fff;
+    cursor: none;
 }
 
 .fd_titleText {
