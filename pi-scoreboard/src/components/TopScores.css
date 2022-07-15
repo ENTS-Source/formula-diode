@@ -16,3 +16,8 @@
     background-color: #97d0ff5d;
     font-size: 2em;
 }
+
+.fd_topScores .fd_score {
+    padding: 0.4em;
+    font-size: 5em;
+}
