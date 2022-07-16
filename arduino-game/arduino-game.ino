@@ -6,6 +6,7 @@
 #include <Wire.h>
 
 // NodeMCU / ESP8266
+// TODO: Gravity
 
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
@@ -17,6 +18,12 @@
 #define LED_STRIP_PIN D4
 #define STRIP_LENGTH 50
 #define WINNER_SHOWN_MS 2500
+#define INIT_PLAYER_LENGTH 3
+#define PHYSICS_ACCL 0.07 // Velocity added per button press
+#define PHYSICS_FRICTION 0.015
+#define PHYSICS_MAX_VELOCITY 4
+#define PHYSICS_MIN_VELOCITY 0
+#define PHYSICS_MS 5 // Time between physics checks
 
 #define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
 #define CONF_SB_IP_LEN 16 // string, fixed length
@@ -26,12 +33,6 @@
 #define BTN_OPEN HIGH
 #define BTN_CLOSED LOW
 #define BTN_DEBOUNCE_MS 10
-#define PHYSICS_ACCL 0.07 // Velocity added per button press
-#define PHYSICS_FRICTION 0.015
-#define PHYSICS_MAX_VELOCITY 3
-#define PHYSICS_MIN_VELOCITY 0
-// TODO: Gravity
-#define PHYSICS_MS 5 // Time between physics checks
 #define I2C_PLAYER_START 0 // address
 #define TOHOST_LENGTH 2  // btn 1 presses & btn 2 presses, 2 bytes
 #define FROMHOST_ASSIGN 0x10
@@ -176,7 +177,7 @@ void playerPhysics(PlayerState &player) {
 }
 
 void playerReset(PlayerState &player) {
-  player.length = 3;
+  player.length = INIT_PLAYER_LENGTH;
   player.position = 0;
   player.location = 0;
   player.velocity = 0;
