@@ -42,6 +42,7 @@
 #define FIELD_SCOREBOARD_NAME "scoreboard"
 #define FIELD_NUMLEDS_NAME "numLeds"
 #define REQUESTS_IN_POOL 12
+#define WIRE_PING_MS 5000
 
 struct PlayerState {
   float velocity;
@@ -68,6 +69,7 @@ bool inGame = false;
 bool btnDownTrigger = false;
 bool btnUpTrigger = false;
 bool btnPressed = false;
+long lastWireScan = 0;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -123,7 +125,8 @@ void setup() {
 
 void loop() {
   bool doReset = trakUpdate();
-  if (doReset) {
+  if (doReset || (!inGame && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
+    lastWireScan = millis();
     gnetScan();
     gnetResetAll();
     updatePlayerIds();
