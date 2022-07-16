@@ -16,20 +16,21 @@
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3 // TODO: Config val
 #define LED_STRIP_PIN D4
-#define STRIP_LENGTH 50
+#define STRIP_LENGTH 300
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
-#define PHYSICS_ACCL 0.07 // Velocity added per button press
-#define PHYSICS_FRICTION 0.015
+#define PHYSICS_ACCL 0.09 // Velocity added per button press
+#define PHYSICS_FRICTION 0.017
 #define PHYSICS_MAX_VELOCITY 4
 #define PHYSICS_MIN_VELOCITY 0
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
 #define AUTO_RAND_MIN 0
 #define AUTO_RAND_MAX 1000
-#define AUTO_THRESHOLD 18 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
+#define AUTO_THRESHOLD 30 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
 #define AUTO_PRESSES_PER 1
 #define AUTO_PLAYERS 2
+#define RENDER_INTERVAL 14
 
 #define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
 #define CONF_SB_IP_LEN 16 // string, fixed length
@@ -79,6 +80,7 @@ bool btnDownTrigger = false;
 bool btnUpTrigger = false;
 bool btnPressed = false;
 long lastWireScan = 0;
+long lastRender = 0;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -291,7 +293,10 @@ bool trakUpdate() {
     }
   }
 
-  trakRender();
+  if ((millis() - lastRender) >= RENDER_INTERVAL) {
+    lastRender = millis();
+    trakRender();
+  }
   return shouldReset;
 }
 
