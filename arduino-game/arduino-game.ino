@@ -733,7 +733,7 @@ void markLapCompleted(int playerNum, int lap, long ms) {
     reqPoolIdx = 0;
   }
   char url[128];
-  sprintf(url, "http://%s:20304/lap_done?player=%d&lap=%d&time=%d", scoreboardIp, playerNum, lap, ms);
+  sprintf(url, "http://%s:20304/lap_done?player=%d&lap=%d&time=%d&automated=%d", scoreboardIp, playerNum, lap, ms, isAutomatedGame);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
     return;
@@ -751,27 +751,9 @@ void markAllLapsCompleted(int playerNum, long ms) {
     reqPoolIdx = 0;
   }
   char url[128];
-  sprintf(url, "http://%s:20304/player_done?player=%d&time=%d", scoreboardIp, playerNum, ms);
+  sprintf(url, "http://%s:20304/player_done?player=%d&time=%d&automated=%d", scoreboardIp, playerNum, ms, isAutomatedGame);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void markDNF(int playerNum) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[128];
-  sprintf(url, "http://%s:20304/player_dnf?player=%d", scoreboardIp, playerNum);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markDNF is a BAD REQUEST");
     return;
   }
   reqPool[reqIdx].send();
@@ -787,7 +769,7 @@ void markGameEnd(int winner) {
     reqPoolIdx = 0;
   }
   char url[128];
-  sprintf(url, "http://%s:20304/game_end?winner=%d", scoreboardIp, winner);
+  sprintf(url, "http://%s:20304/game_end?winner=%d&automated=%d", scoreboardIp, winner, isAutomatedGame);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameEnd is a BAD REQUEST");
     return;
@@ -805,7 +787,7 @@ void markGameStart(int numPlayers) {
     reqPoolIdx = 0;
   }
   char url[128];
-  sprintf(url, "http://%s:20304/game_start?players=%d", scoreboardIp, numPlayers);
+  sprintf(url, "http://%s:20304/game_start?players=%d&automated=%d", scoreboardIp, numPlayers, isAutomatedGame);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameStart is a BAD REQUEST");
     return;
@@ -823,7 +805,7 @@ void markGameIntro() {
     reqPoolIdx = 0;
   }
   char url[64];
-  sprintf(url, "http://%s:20304/game_intro", scoreboardIp);
+  sprintf(url, "http://%s:20304/game_intro?automated=%d", scoreboardIp, isAutomatedGame);
   if (!reqPool[reqIdx].open("POST", url)) {
     Serial.println("ERROR: markGameIntro is a BAD REQUEST");
     return;

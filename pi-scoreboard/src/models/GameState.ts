@@ -14,6 +14,7 @@ export class GameState {
     public phase: GamePhase = "intro";
     public startTimeMs = 0;
     public players: GamePlayer[] = [];
+    public automated = false;
 
     private listeners: UpdateCB[] = [];
 
@@ -23,6 +24,7 @@ export class GameState {
             const [command, args] = path.substring(1).split('?');
             const qs = new URLSearchParams(args ?? "");
             console.log(command, args);
+            this.automated = qs.get("automated") === "1";
             switch(command) {
                 case 'game_intro':
                     this.phase = "intro";
@@ -71,7 +73,7 @@ export class GameState {
                     this.phase = "end";
                     const winner = Number(qs.get('winner'));
                     if (winner < 0) {
-                        this.phase = "error";
+                        this.phase = this.automated ? "intro" : "error";
                     } else {
                         if (!this.players[winner]) return;
                         this.players[winner].winner = true;

@@ -15,7 +15,7 @@ export function TopScores() {
         if (phase !== state.phase) {
             setPhase(state.phase);
 
-            if (state.phase === "end") {
+            if (state.phase === "end" && !state.automated) {
                 let newScores = [...scores];
                 for (const player of state.players) {
                     newScores.push(player.totalTimeMs);
