@@ -24,6 +24,12 @@
 #define PHYSICS_MAX_VELOCITY 4
 #define PHYSICS_MIN_VELOCITY 0
 #define PHYSICS_MS 5 // Time between physics checks
+#define SCREENSAVER_WAIT_MS 120000 // 2 minutes
+#define AUTO_RAND_MIN 0
+#define AUTO_RAND_MAX 1000
+#define AUTO_THRESHOLD 18 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
+#define AUTO_PRESSES_PER 1
+#define AUTO_PLAYERS 2
 
 #define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
 #define CONF_SB_IP_LEN 16 // string, fixed length
@@ -65,8 +71,10 @@ CRGB leds[STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
 long lightsStartMs = 0;
 long endMs = 0;
+long lastGameEnd = 0;
 int winnerNum = NO_WINNER;
 bool inGame = false;
+bool isAutomatedGame = false;
 bool btnDownTrigger = false;
 bool btnUpTrigger = false;
 bool btnPressed = false;
@@ -212,8 +220,19 @@ bool trakUpdate() {
       } else {
         winnerNum = NO_WINNER;
         endMs = 0;
+        lastGameEnd = millis();
+
+        if (isAutomatedGame) {
+          lastGameEnd = 0; // allow another automated game to start right away
+          shouldReset = true;
+        }
       }
     } else if (lightsStartMs > 0) {
+      if (isAutomatedGame) {
+        leds[TRAFFIC_START + 6] = CRGB::Purple;
+        leds[TRAFFIC_START + 5] = CRGB::Purple;
+      }
+      
       leds[TRAFFIC_START - 0] = TRAFFIC_RED;
       leds[TRAFFIC_START - 1] = TRAFFIC_RED;
 
@@ -245,13 +264,31 @@ bool trakUpdate() {
         markGameStart(nPlayers);
       }
     } else if (btnDownTrigger) {
+      isAutomatedGame = false;
+      
+      lightsStartMs = millis();
+      shouldReset = true;
+      markGameIntro();
+    } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
+      isAutomatedGame = true;
+      
       lightsStartMs = millis();
       shouldReset = true;
       markGameIntro();
     }
   } else {
-    trakUpdatePlayers();
-    trakDrawPlayers();
+    if (isAutomatedGame && btnDownTrigger) {
+      lastGameEnd = millis(); // ensure another game can't start right away
+
+      // force end the game
+      endMs = 0;
+      inGame = false;
+      winnerNum = NO_WINNER;
+      markGameEnd(winnerNum);
+    } else {
+      trakUpdatePlayers();
+      trakDrawPlayers();
+    }
   }
 
   trakRender();
@@ -264,11 +301,19 @@ bool trakUpdate() {
 void trakUpdatePlayers() {
   bool allDone = true;
   for (int i = 0; i < I2C_PLAYERS; i++) {
+    if (isAutomatedGame) {
+      players[i].isConnected = (i < AUTO_PLAYERS);
+    }
+    
     if (!players[i].isConnected) {
       continue;
     }
     if (players[i].finishMs > 0) {
       continue; // already finished all laps (don't adjust lap times)
+    }
+
+    if (isAutomatedGame && random(AUTO_RAND_MIN, AUTO_RAND_MAX) <= AUTO_THRESHOLD) {
+      players[i].unhandledPresses += AUTO_PRESSES_PER;
     }
 
     int oldLaps = players[i].location / STRIP_LENGTH;
