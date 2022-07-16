@@ -136,7 +136,7 @@ void setup() {
 
 void loop() {
   bool doReset = trakUpdate();
-  if (doReset || (!inGame && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
+  if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
     gnetScan();
     gnetResetAll();
