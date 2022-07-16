@@ -223,8 +223,9 @@ bool trakUpdate() {
       }
 
       if ((millis() - lightsStartMs) >= 2000) {
-        leds[TRAFFIC_START - 4] = TRAFFIC_GREEN;
-        leds[TRAFFIC_START - 5] = TRAFFIC_GREEN;
+        for (int i = 0; i < 6; i++) {
+          leds[TRAFFIC_START - i] = TRAFFIC_GREEN;
+        }
       }
 
       if ((millis() - lightsStartMs) >= 2400) {
