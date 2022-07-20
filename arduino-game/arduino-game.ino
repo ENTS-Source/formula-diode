@@ -16,7 +16,7 @@
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3 // TODO: Config val
 #define LED_STRIP_PIN D4
-#define STRIP_LENGTH 300
+#define STRIP_LENGTH 390
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
 #define PHYSICS_ACCL 0.09 // Velocity added per button press
@@ -27,7 +27,7 @@
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
 #define AUTO_RAND_MIN 0
 #define AUTO_RAND_MAX 1000
-#define AUTO_THRESHOLD 30 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
+#define AUTO_THRESHOLD 50 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
 #define AUTO_PRESSES_PER 1
 #define AUTO_PLAYERS 2
 #define RENDER_INTERVAL 14
