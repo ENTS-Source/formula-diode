@@ -6,7 +6,6 @@
 #include <Wire.h>
 
 // NodeMCU / ESP8266
-// TODO: Gravity
 
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
@@ -21,8 +20,9 @@
 #define INIT_PLAYER_LENGTH 3
 #define PHYSICS_ACCL 0.09 // Velocity added per button press
 #define PHYSICS_FRICTION 0.017
+#define GRAVITY_EFFECT 0.007
 #define PHYSICS_MAX_VELOCITY 4
-#define PHYSICS_MIN_VELOCITY 0
+#define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
 #define AUTO_RAND_MIN 0
@@ -51,6 +51,15 @@
 #define FIELD_NUMLEDS_NAME "numLeds"
 #define REQUESTS_IN_POOL 12
 #define WIRE_PING_MS 5000
+#define GRAVITY_ENABLED B00000001
+#define SLOPE_FORWARD B00000010
+#define SLOPE_BACKWARD B00000000 // inverse of forward
+
+byte featuresRange[][3] = {
+  {5, 4, GRAVITY_ENABLED | SLOPE_BACKWARD}, // pos 5, for 4 pixels, slope backward
+  {10, 4, GRAVITY_ENABLED | SLOPE_FORWARD}, // pos 10, for 4 pixels, slope forwards
+  {16, 4, GRAVITY_ENABLED | SLOPE_FORWARD}, // pos 16, for 4 pixels, slope forwards
+};
 
 struct PlayerState {
   float velocity;
@@ -69,6 +78,7 @@ struct PlayerState {
 
 char scoreboardIp[CONF_SB_IP_LEN];
 CRGB leds[STRIP_LENGTH * STRIP_COUNT];
+byte stripMap[STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
 long lightsStartMs = 0;
 long endMs = 0;
@@ -120,6 +130,20 @@ void setup() {
   gnetSetup();
   trakSetup();
   netSetup();
+
+  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+    stripMap[i] = 0;
+  }
+
+  int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
+  for (int i = 0; i < featureRows; i++) {
+    byte startIdx = featuresRange[i][0];
+    byte lengthIdx = featuresRange[i][1];
+    byte flags = featuresRange[i][2];
+    for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
+      stripMap[j] = flags;
+    }
+  }
 
   for (int i = 0; i < REQUESTS_IN_POOL; i++) {
     reqPool[i].onReadyStateChange(ignoreCallback);
@@ -184,6 +208,24 @@ void playerPhysics(PlayerState &player) {
   }
   player.position += player.velocity;
   player.location = round(player.position); // int location
+
+  // Gravity, front wheel drive
+  int relPos = (player.location + player.length) % STRIP_LENGTH;
+  if ((stripMap[relPos] & GRAVITY_ENABLED) != 0) {
+    float effect = GRAVITY_EFFECT;
+    if ((stripMap[relPos] & SLOPE_FORWARD) == 0) {
+      // means we're sloping backwards
+      effect = effect * -1;
+    }
+    player.velocity += effect;
+    player.position += player.velocity;
+  }
+
+  // Last minute check on position
+  if (player.position < 0) {
+    player.position = 0;
+  }
+  player.location = round(player.position);
 }
 
 void playerReset(PlayerState &player) {
