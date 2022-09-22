@@ -1,7 +1,7 @@
 #include "IDLED.h"
 
 IDLED::IDLED() {
-  FastLED.addLeds<NEOPIXEL, LED_PIN>(this->leds, 1);
+  FastLED.addLeds<WS2812B, LED_PIN, GRB>(this->leds, 1);
 }
 
 void IDLED::off() {
