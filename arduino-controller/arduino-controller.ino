@@ -45,7 +45,7 @@ void loop() {
   motor->update();
   accl->update();
   if (accl->isDownTrigger) {
-    motor->onForMs(1000);
+//    motor->onForMs(1000);
     gamenet->acclBtnPresses++;
     Serial.println("Press");
   }
@@ -54,7 +54,7 @@ void loop() {
     Serial.println("Handling reset");
     gamenet->acclBtnPresses = 0;
     gamenet->secondBtnPresses = 0;
-    motor->off();
+//    motor->off();
   }
 }
 
