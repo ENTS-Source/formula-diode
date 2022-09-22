@@ -15,13 +15,15 @@
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3 // TODO: Config val
 #define LED_STRIP_PIN D4
-#define STRIP_LENGTH 390
+#define STRIP_LENGTH 377
+//#define STRIP_LENGTH 405
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
-#define PHYSICS_ACCL 0.09 // Velocity added per button press
+#define PHYSICS_ACCL 0.28 // Velocity added per button press
 #define PHYSICS_FRICTION 0.017
 #define GRAVITY_EFFECT 0.007
-#define PHYSICS_MAX_VELOCITY 4
+#define SPEED_BOOST_FACTOR 0.2
+#define PHYSICS_MAX_VELOCITY 400000
 #define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
@@ -52,13 +54,14 @@
 #define REQUESTS_IN_POOL 12
 #define WIRE_PING_MS 5000
 #define GRAVITY_ENABLED B00000001
+#define SPEED_BOOST_ENABLED B00000100
 #define SLOPE_FORWARD B00000010
 #define SLOPE_BACKWARD B00000000 // inverse of forward
 
-byte featuresRange[][3] = {
-  {5, 4, GRAVITY_ENABLED | SLOPE_BACKWARD}, // pos 5, for 4 pixels, slope backward
-  {10, 4, GRAVITY_ENABLED | SLOPE_FORWARD}, // pos 10, for 4 pixels, slope forwards
-  {16, 4, GRAVITY_ENABLED | SLOPE_FORWARD}, // pos 16, for 4 pixels, slope forwards
+int featuresRange[][3] = {
+  {272, 38, GRAVITY_ENABLED | SLOPE_BACKWARD},
+  {310, 35, GRAVITY_ENABLED | SLOPE_FORWARD},
+  {265, 7, SPEED_BOOST_ENABLED},
 };
 
 struct PlayerState {
@@ -95,6 +98,8 @@ long lastRender = 0;
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
 CRGB TRAFFIC_GREEN = CRGB(0, 132, 5);
+
+CRGB SPEED_BOOST_COLOR = CRGB(255, 170, 0);
 
 CRGB colors[I2C_PLAYERS] = {
   CRGB::Blue,
@@ -137,8 +142,8 @@ void setup() {
 
   int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
   for (int i = 0; i < featureRows; i++) {
-    byte startIdx = featuresRange[i][0];
-    byte lengthIdx = featuresRange[i][1];
+    int startIdx = featuresRange[i][0];
+    int lengthIdx = featuresRange[i][1];
     byte flags = featuresRange[i][2];
     for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
       stripMap[j] = flags;
@@ -219,6 +224,11 @@ void playerPhysics(PlayerState &player) {
     }
     player.velocity += effect;
     player.position += player.velocity;
+  }
+  if ((stripMap[relPos] & SPEED_BOOST_ENABLED) != 0) {
+    player.velocity += SPEED_BOOST_FACTOR;
+    player.position += player.velocity;
+//    stripMap[relPos] = (stripMap[relPos] & ~SPEED_BOOST_ENABLED);
   }
 
   // Last minute check on position
@@ -331,6 +341,7 @@ bool trakUpdate() {
       markGameEnd(winnerNum);
     } else {
       trakUpdatePlayers();
+      trakDrawBoosts();
       trakDrawPlayers();
     }
   }
@@ -455,6 +466,14 @@ void trakDrawPlayers() {
         leds[i].g / mapHeight,
         leds[i].b / mapHeight
       );
+    }
+  }
+}
+
+void trakDrawBoosts() {
+  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+    if ((stripMap[i] & SPEED_BOOST_ENABLED) != 0) {
+      leds[i] = SPEED_BOOST_COLOR;
     }
   }
 }
