@@ -8,6 +8,7 @@
 
 #define NUM_PIN_LOW 2
 #define NUM_PIN_HIGH 3
+#define HARDCODE_PLAYER_NUM 1 // set negative to autodetect, zero or positive to force that number
 
 Button* accl;
 VibrationMotor* motor;
@@ -25,11 +26,17 @@ void setup() {
   Serial.begin(115200);
 
   int playerNum = 0;
-  if (digitalRead(NUM_PIN_LOW) == HIGH) {
-    playerNum = playerNum | B00000001;
-  }
-  if (digitalRead(NUM_PIN_HIGH) == HIGH) {
-    playerNum = playerNum | B00000010;
+  if (HARDCODE_PLAYER_NUM < 0) {
+    Serial.println("Reading player number");
+    if (digitalRead(NUM_PIN_LOW) == HIGH) {
+      playerNum = playerNum | B00000001;
+    }
+    if (digitalRead(NUM_PIN_HIGH) == HIGH) {
+      playerNum = playerNum | B00000010;
+    }
+  } else {
+    Serial.println("Using hardcoded player number");
+    playerNum = HARDCODE_PLAYER_NUM;
   }
   Serial.print("Player num: ");
   Serial.println(playerNum);
@@ -67,4 +74,11 @@ void checkLed() {
   lastG = gamenet->idG;
   lastB = gamenet->idB;
   led->setColor(lastR, lastG, lastB);
+  Serial.print("Set LED ");
+  Serial.print(lastR);
+  Serial.print(",");
+  Serial.print(lastG);
+  Serial.print(",");
+  Serial.print(lastB);
+  Serial.println();
 }
