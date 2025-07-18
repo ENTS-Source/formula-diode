@@ -7,6 +7,7 @@
 
 // NodeMCU / ESP8266
 
+#define COUNTING_MODE false
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
 #define SCL_PIN D1
@@ -15,15 +16,17 @@
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3 // TODO: Config val
 #define LED_STRIP_PIN D4
-#define STRIP_LENGTH 377
-//#define STRIP_LENGTH 405
+//#define STRIP_LENGTH 325
+#define STRIP_LENGTH 385
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
-#define PHYSICS_ACCL 0.28 // Velocity added per button press
+#define PHYSICS_ACCL 0.125 // Velocity added per button press
 #define PHYSICS_FRICTION 0.017
 #define GRAVITY_EFFECT 0.007
-#define SPEED_BOOST_FACTOR 0.2
-#define PHYSICS_MAX_VELOCITY 400000
+#define SPEED_BOOST_FACTOR 0.3
+#define TAR_TRAP_FRICTION 0.18
+#define TAR_TRAP_ACCL 0.03
+#define PHYSICS_MAX_VELOCITY 275000
 #define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
@@ -57,11 +60,22 @@
 #define SPEED_BOOST_ENABLED B00000100
 #define SLOPE_FORWARD B00000010
 #define SLOPE_BACKWARD B00000000 // inverse of forward
+#define TAR_TRAP_ENABLED B00001000
 
 int featuresRange[][3] = {
-  {272, 38, GRAVITY_ENABLED | SLOPE_BACKWARD},
-  {310, 35, GRAVITY_ENABLED | SLOPE_FORWARD},
-  {265, 7, SPEED_BOOST_ENABLED},
+  // 2022
+//  {272, 38, GRAVITY_ENABLED | SLOPE_BACKWARD},
+//  {310, 35, GRAVITY_ENABLED | SLOPE_FORWARD},
+
+  // 2025-1
+//  {265, 5, SPEED_BOOST_ENABLED},
+//  {45, 5, SPEED_BOOST_ENABLED},
+
+  // 2025-2
+  {249, 5, TAR_TRAP_ENABLED},
+  {307, 5, SPEED_BOOST_ENABLED},
+  {119, 5, SPEED_BOOST_ENABLED},
+//  {11, 15, SPEED_BOOST_ENABLED},
 };
 
 struct PlayerState {
@@ -100,6 +114,7 @@ CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
 CRGB TRAFFIC_GREEN = CRGB(0, 132, 5);
 
 CRGB SPEED_BOOST_COLOR = CRGB(255, 170, 0);
+CRGB TAR_TRAP_COLOR = CRGB(46, 0, 74);
 
 CRGB colors[I2C_PLAYERS] = {
   CRGB::Blue,
@@ -157,13 +172,26 @@ void setup() {
   for (int i = 0; i < I2C_PLAYERS; i++) {
     playerReset(players[i]);
     players[i].color = colors[i];
+    Serial.print("Player ");
+    Serial.print(i);
+    Serial.print(" is ");
+    printColor(colors[i]);
+    Serial.println();
   }
 
   gnetScan();
   updatePlayerIds();
+
+  if (COUNTING_MODE) {
+    Serial.print("Entering track setup/LED counting mode");
+    trakCountStrip();
+  }
 }
 
 void loop() {
+  if (COUNTING_MODE) {
+    return; // don't actually do anything
+  }
   bool doReset = trakUpdate();
   if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
@@ -192,8 +220,14 @@ void playerPhysics(PlayerState &player) {
     return; // they're done the race
   }
 
+  int relPos = (player.location + player.length) % STRIP_LENGTH;
+  bool tarTrap = (stripMap[relPos] & TAR_TRAP_ENABLED) != 0;
   for (int i = 0; i < player.unhandledPresses; i++) {
-    player.velocity += PHYSICS_ACCL;
+    if (tarTrap) {
+      player.velocity += TAR_TRAP_ACCL;
+    } else {
+      player.velocity += PHYSICS_ACCL;
+    }
   }
   player.unhandledPresses = 0;
 
@@ -207,7 +241,11 @@ void playerPhysics(PlayerState &player) {
   }
 
   // Move vehicle
-  player.velocity -= player.velocity * PHYSICS_FRICTION;
+  float friction = PHYSICS_FRICTION;
+  if (tarTrap) {
+    friction = TAR_TRAP_FRICTION;
+  }
+  player.velocity -= player.velocity * friction;
   if (player.velocity < PHYSICS_MIN_VELOCITY) {
     player.velocity = PHYSICS_MIN_VELOCITY;
   }
@@ -215,7 +253,7 @@ void playerPhysics(PlayerState &player) {
   player.location = round(player.position); // int location
 
   // Gravity, front wheel drive
-  int relPos = (player.location + player.length) % STRIP_LENGTH;
+  relPos = (player.location + player.length) % STRIP_LENGTH;
   if ((stripMap[relPos] & GRAVITY_ENABLED) != 0) {
     float effect = GRAVITY_EFFECT;
     if ((stripMap[relPos] & SLOPE_FORWARD) == 0) {
@@ -421,10 +459,25 @@ void trakClear() {
   }
 }
 
+void trakCountStrip() {
+  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+    leds[i] = SPEED_BOOST_COLOR;
+  }
+  trakRender();
+}
+
 void trakDrawWinner() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     leds[i] = players[winnerNum].color;
   }
+}
+
+void printColor(CRGB color) {
+  Serial.print(color.r);
+  Serial.print(",");
+  Serial.print(color.g);
+  Serial.print(",");
+  Serial.print(color.b);
 }
 
 void trakDrawPlayers() {
@@ -449,11 +502,20 @@ void trakDrawPlayers() {
         targetLoc = (targetLoc - maxStripPos); // overrun
       }
       positionMap[targetLoc]++;
-      leds[targetLoc] = CRGB(
-        leds[targetLoc].r + players[i].color.r,
-        leds[targetLoc].g + players[i].color.g,
-        leds[targetLoc].b + players[i].color.b
-      );
+//      Serial.print("@@ Draw ");
+//      Serial.print(targetLoc);
+//      Serial.print(" curr:");
+//      printColor(leds[targetLoc]);
+//      Serial.print(" plyr:");
+//      printColor(players[i].color);
+        leds[targetLoc] = CRGB(
+          leds[targetLoc].r + players[i].color.r,
+          leds[targetLoc].g + players[i].color.g,
+          leds[targetLoc].b + players[i].color.b
+        );
+//      Serial.print(" res:");
+//      printColor(leds[targetLoc]);
+//      Serial.println();
     }
   }
 
@@ -474,6 +536,9 @@ void trakDrawBoosts() {
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     if ((stripMap[i] & SPEED_BOOST_ENABLED) != 0) {
       leds[i] = SPEED_BOOST_COLOR;
+    }
+    if ((stripMap[i] & TAR_TRAP_ENABLED) != 0) {
+      leds[i] = TAR_TRAP_COLOR;
     }
   }
 }
