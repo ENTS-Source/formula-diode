@@ -1,7 +1,6 @@
 #include <FastLED.h>
 #include <EEPROM.h>
 #include <Regexp.h>
-#include <AsyncHTTPRequest_Generic.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 
@@ -18,7 +17,6 @@ TODO:
 - Tar trap assist for kids / general kids boost (slow button presses consistently make the game un-fun)
 */
 
-#define NO_SCOREBOARD true
 #define COUNTING_MODE false
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
@@ -50,11 +48,8 @@ TODO:
 #define AUTO_PLAYERS 2
 #define RENDER_INTERVAL 14
 
-#define CONF_SB_IP_ADDR 128 // stay out of the way of wifimanager
-#define CONF_SB_IP_LEN 16 // string, fixed length
 #define NOT_CONNECTED_PIN D6
 #define CONF_EEPROM_SIZE 512
-#define NO_SB_IP "none"
 #define BTN_OPEN HIGH
 #define BTN_CLOSED LOW
 #define BTN_DEBOUNCE_MS 10
@@ -65,9 +60,6 @@ TODO:
 #define TRAFFIC_START 7 // address; +1 from bottom, for aesthetics. Must be at least 6
 #define NO_WINNER -1
 #define NW_STATUS_LED 4
-#define FIELD_SCOREBOARD_NAME "scoreboard"
-#define FIELD_NUMLEDS_NAME "numLeds"
-#define REQUESTS_IN_POOL 12
 #define WIRE_PING_MS 5000
 #define GRAVITY_ENABLED B00000001
 #define SPEED_BOOST_ENABLED B00000100
@@ -106,7 +98,6 @@ struct PlayerState {
   bool isConnected;
 };
 
-char scoreboardIp[CONF_SB_IP_LEN];
 CRGB leds[STRIP_LENGTH * STRIP_COUNT];
 byte stripMap[STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
@@ -142,24 +133,6 @@ PlayerState players[I2C_PLAYERS] = {
   PlayerState{},
   PlayerState{},
 };
-AsyncHTTPRequest reqPool[REQUESTS_IN_POOL] = {
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-  AsyncHTTPRequest{},
-};
-int reqPoolIdx = 0;
 
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
@@ -181,10 +154,6 @@ void setup() {
     for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
       stripMap[j] = flags;
     }
-  }
-
-  for (int i = 0; i < REQUESTS_IN_POOL; i++) {
-    reqPool[i].onReadyStateChange(ignoreCallback);
   }
 
   for (int i = 0; i < I2C_PLAYERS; i++) {
@@ -371,15 +340,12 @@ bool trakUpdate() {
             nPlayers++;
           }
         }
-
-        markGameStart(nPlayers);
       }
     } else if (btnDownTrigger) {
       isAutomatedGame = false;
       
       lightsStartMs = millis();
       shouldReset = true;
-      markGameIntro();
       lastPress = millis();
     } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
       isAutomatedGame = true;
@@ -387,7 +353,6 @@ bool trakUpdate() {
       
       lightsStartMs = millis();
       shouldReset = true;
-      markGameIntro();
     }
   } else {
     if (isAutomatedGame && btnDownTrigger) {
@@ -397,7 +362,6 @@ bool trakUpdate() {
       endMs = 0;
       inGame = false;
       winnerNum = NO_WINNER;
-      markGameEnd(winnerNum);
     } else {
       trakUpdatePlayers();
       trakDrawBoosts();
@@ -447,13 +411,11 @@ void trakUpdatePlayers() {
         lastLapMs = startTimeMs;
       }
       long lapTime = millis();
-      markLapCompleted(i, newLaps, lapTime - lastLapMs);
       players[i].lastLapFinishMs = lapTime;
     }
 
     if ((players[i].location / STRIP_LENGTH) >= MAX_LAPS) {
       players[i].finishMs = millis();
-      markAllLapsCompleted(i, players[i].finishMs - startTimeMs);
     }
 
     allDone = allDone && (players[i].finishMs > 0);
@@ -471,7 +433,6 @@ void trakUpdatePlayers() {
         winnerNum = i;
       }
     }
-    markGameEnd(winnerNum);
   }
 }
 
@@ -705,64 +666,13 @@ void confSetup() {
 }
 
 void confRead() {
-  confReadString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, scoreboardIp);
-//  strcpy(scoreboardIp, NO_SB_IP);
-
-  // Validation
-  if (!NO_SCOREBOARD) {
-    MatchState ms;
-    ms.Target(scoreboardIp, CONF_SB_IP_LEN);
-    if (ms.Match("[0-9]+.[0-9]+.[0-9]+.[0-9]+") != REGEXP_MATCHED) {
-      Serial.print("Invalid scoreboard IP: ");
-      Serial.println(scoreboardIp);
-      strcpy(scoreboardIp, NO_SB_IP);
-    }
-    char str2[CONF_SB_IP_LEN] = "";
-    int j = 0;
-    for (int i = 0; i < CONF_SB_IP_LEN; i++) {
-      char c = scoreboardIp[i];
-      if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
-        str2[j] = c;
-        j++;
-      }
-    }
-    strcpy(scoreboardIp, str2);
-    if (strcmp(scoreboardIp, "") == 0) {
-      Serial.println("Scoreboard IP was empty - resetting");
-      strcpy(scoreboardIp, NO_SB_IP);
-    }
-//    scoreboardIp = NO_SB_IP;
-  
-    // Debug
-    Serial.print("Scoreboard IP: ");
-    Serial.println(scoreboardIp);
-  }
 }
 
 void confWrite() {
-  char str2[CONF_SB_IP_LEN] = "";
-  int j = 0;
-  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
-    char c = scoreboardIp[i];
-    if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
-      str2[j] = c;
-      j++;
-    }
-  }
-  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
-    char c = str2[i];
-    if (c <= 48 && c >= 57 && c != 46) { // not a number or full stop
-      str2[i] = ' ';
-    }
-  }
-
-  confWriteString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, str2);
   EEPROM.commit();
-  confRead(); // read back for validation
 }
 
 void confClear() {
-  strcpy(scoreboardIp, "");
   confWrite();
 }
 
@@ -818,15 +728,8 @@ void netSetup() {
   }
 
   confRead();
-  if (strcmp(scoreboardIp, "") == 0) {
-    strcpy(scoreboardIp, NO_SB_IP);
-  }
-  scoreboardIPField = new WiFiManagerParameter(FIELD_SCOREBOARD_NAME, "Scoreboard IP", scoreboardIp, CONF_SB_IP_LEN, "placeholder=\"none\"");
 
-  wm.addParameter(scoreboardIPField);
-  wm.setSaveParamsCallback(netSaveWmParams);
-
-  std::vector<const char *> menu = {"wifi", "param", "sep", "restart", "exit"};
+  std::vector<const char *> menu = {"wifi", "sep", "restart", "exit"};
   wm.setMenu(menu);
 
   bool worked = wm.autoConnect("LEDRacerGameBoard");
@@ -847,133 +750,7 @@ void netSetup() {
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
 
-  netSaveWmParams(); // just in case
-
-  if (scoreboardIp != NO_SB_IP && !NO_SCOREBOARD) {
-    Serial.println("Validating scoreboard details");
-    IPAddress ip;
-    if (!ip.fromString(scoreboardIp)) {
-      Serial.println("Invalid IP");
-
-      // fail loop
-      while(true) {
-        leds[NW_STATUS_LED] = CRGB::Red;
-        trakRender();
-        delay(500);
-        leds[NW_STATUS_LED] = CRGB::Black;
-        trakRender();
-        delay(250);
-      }
-    }
-
-    Serial.println("Ready to connect to scoreboard");
-  }
-
   leds[NW_STATUS_LED] = CRGB::Black;
   trakRender();
 }
 
-void netSaveWmParams() {
-  strcpy(scoreboardIp, scoreboardIPField->getValue());
-  Serial.print("New scoreboard IP to write: ");
-  Serial.println(scoreboardIp);
-  confWrite();
-}
-
-// ---------------------------------------------------------------
-// ---- HTTP
-// ===============================================================
-
-void markLapCompleted(int playerNum, int lap, long ms) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[128];
-  sprintf(url, "http://%s:20304/lap_done?player=%d&lap=%d&time=%d&automated=%d", scoreboardIp, playerNum, lap, ms, isAutomatedGame);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markLapCompleted is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void markAllLapsCompleted(int playerNum, long ms) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[128];
-  sprintf(url, "http://%s:20304/player_done?player=%d&time=%d&automated=%d", scoreboardIp, playerNum, ms, isAutomatedGame);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markAllLapsCompleted is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void markGameEnd(int winner) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[128];
-  sprintf(url, "http://%s:20304/game_end?winner=%d&automated=%d", scoreboardIp, winner, isAutomatedGame);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markGameEnd is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void markGameStart(int numPlayers) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[128];
-  sprintf(url, "http://%s:20304/game_start?players=%d&automated=%d", scoreboardIp, numPlayers, isAutomatedGame);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markGameStart is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void markGameIntro() {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
-    return;
-  }
-  int reqIdx = reqPoolIdx;
-  reqPoolIdx++;
-  if (reqPoolIdx >= REQUESTS_IN_POOL) {
-    reqPoolIdx = 0;
-  }
-  char url[64];
-  sprintf(url, "http://%s:20304/game_intro?automated=%d", scoreboardIp, isAutomatedGame);
-  if (!reqPool[reqIdx].open("POST", url)) {
-    Serial.println("ERROR: markGameIntro is a BAD REQUEST");
-    return;
-  }
-  reqPool[reqIdx].send();
-}
-
-void ignoreCallback(void* optParm, AsyncHTTPRequest* request, int readyState) {
-  // consume
-}
