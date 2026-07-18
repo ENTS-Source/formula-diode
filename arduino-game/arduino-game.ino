@@ -152,6 +152,19 @@ void setupLeds() {
   for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     stripMap[i] = 0;
   }
+
+  int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
+  for (int i = 0; i < featureRows; i++) {
+    int startIdx = featuresRange[i][0];
+    int lengthIdx = featuresRange[i][1];
+    byte flags = featuresRange[i][2];
+    for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
+      if (j > (stripLength * STRIP_COUNT)) {
+        continue;
+      }
+      stripMap[j] = flags;
+    }
+  }
 }
 
 void setup() {
@@ -162,16 +175,6 @@ void setup() {
   setupLeds();
   trakSetup();
   netSetup();
-
-  int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
-  for (int i = 0; i < featureRows; i++) {
-    int startIdx = featuresRange[i][0];
-    int lengthIdx = featuresRange[i][1];
-    byte flags = featuresRange[i][2];
-    for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
-      stripMap[j] = flags;
-    }
-  }
 
   for (int i = 0; i < I2C_PLAYERS; i++) {
     playerReset(players[i]);
