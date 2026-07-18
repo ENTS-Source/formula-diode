@@ -139,40 +139,12 @@ PlayerState players[I2C_PLAYERS] = {
   PlayerState{},
 };
 
-void setupLeds() {
-  stripLength = confReadInt(CONF_LENGTH_ADDR);
-  if (stripLength <= 0) {
-    stripLength = 1;
-  }
-  leds = new CRGB[stripLength * STRIP_COUNT];
-  stripMap = new byte[stripLength * STRIP_COUNT];
-  Serial.print("Strip length: ");
-  Serial.println(stripLength);
-
-  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
-    stripMap[i] = 0;
-  }
-
-  int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
-  for (int i = 0; i < featureRows; i++) {
-    int startIdx = featuresRange[i][0];
-    int lengthIdx = featuresRange[i][1];
-    byte flags = featuresRange[i][2];
-    for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
-      if (j > (stripLength * STRIP_COUNT)) {
-        continue;
-      }
-      stripMap[j] = flags;
-    }
-  }
-}
-
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
   Serial.begin(115200);
   gnetSetup();
   confSetup();
-  setupLeds();
+  ledSetup();
   trakSetup();
   netSetup();
 
@@ -211,7 +183,7 @@ void loop() {
     players[1].unhandledPresses = 1;
     if (lenBefore != stripLength) {
       confWriteInt(CONF_LENGTH_ADDR, stripLength);
-      setupLeds();
+      ledSetup();
       trakCountStrip();
     }
     if (btnPressed && (countModeStartTimeout == 0 || (millis() - countModeStartTimeout) >= COUNT_MODE_WAIT_MS * 2)) {
@@ -235,6 +207,34 @@ void loop() {
 void updatePlayerIds() {
   for (int i = 0; i < I2C_PLAYERS; i++) {
     gnetUpdateColor(i, players[i].color.r, players[i].color.g, players[i].color.b);
+  }
+}
+
+void ledSetup() {
+  stripLength = confReadInt(CONF_LENGTH_ADDR);
+  if (stripLength <= 0) {
+    stripLength = 1;
+  }
+  leds = new CRGB[stripLength * STRIP_COUNT];
+  stripMap = new byte[stripLength * STRIP_COUNT];
+  Serial.print("Strip length: ");
+  Serial.println(stripLength);
+
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
+    stripMap[i] = 0;
+  }
+
+  int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
+  for (int i = 0; i < featureRows; i++) {
+    int startIdx = featuresRange[i][0];
+    int lengthIdx = featuresRange[i][1];
+    byte flags = featuresRange[i][2];
+    for (int j = startIdx; j <= (startIdx + lengthIdx); j++) {
+      if (j > (stripLength * STRIP_COUNT)) {
+        continue;
+      }
+      stripMap[j] = flags;
+    }
   }
 }
 
