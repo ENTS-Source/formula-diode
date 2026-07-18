@@ -3,6 +3,7 @@
 #include <Regexp.h>
 #include <WiFiManager.h>
 #include <Wire.h>
+#include <ArduinoOTA.h>
 
 // NodeMCU / ESP8266
 
@@ -188,6 +189,8 @@ void setup() {
 }
 
 void loop() {
+  ArduinoOTA.handle();
+
   bool doReset = trakUpdate();
   if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
@@ -790,6 +793,46 @@ void netSetup() {
 
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
+
+  // ArduinoOTA.setPassword("SafetyFirst!");
+  ArduinoOTA.onStart([]() {
+    Serial.println("OTA update started");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("OTA update complete");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    unsigned int percent = total == 0 ? 0 : static_cast<unsigned int>(
+      (static_cast<uint64_t>(progress) * 100) / 100
+    );
+    Serial.printf("OTA progress %u%%", percent);
+    Serial.println();
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA error: %u - ", error);
+    switch(error) {
+      case OTA_AUTH_ERROR:
+        Serial.println("auth error");
+        break;
+      case OTA_BEGIN_ERROR:
+        Serial.println("begin error");
+        break;
+      case OTA_CONNECT_ERROR:
+        Serial.println("connect error");
+        break;
+      case OTA_RECEIVE_ERROR:
+        Serial.println("receive error");
+        break;
+      case OTA_END_ERROR:
+        Serial.println("end error");
+        break;
+      default:
+        Serial.println("unknown");
+        break;
+    }
+  });
+  ArduinoOTA.begin();
+  Serial.println("OTA ready");
 
   leds[NW_STATUS_LED] = CRGB::Black;
   trakRender();
