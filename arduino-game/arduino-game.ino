@@ -7,6 +7,17 @@
 
 // NodeMCU / ESP8266
 
+/*
+TODO:
+- Fix NO_SCOREBOARD to actually work (also, make it configurable via web)
+- Add world editor (ideally via web: add feature button, left+right to move down the track, up+down to make bigger and smaller)
+- Easy/Medium/Hard levels (switchable from front button?)
+- Make LED strip length web config (with visual so it can be easily measured)
+- Try to remove I2C dependency to deal with PCB flexing issues
+- Interrupt screensaver with controller buttons? (undecided)
+- Tar trap assist for kids / general kids boost (slow button presses consistently make the game un-fun)
+*/
+
 #define NO_SCOREBOARD true
 #define COUNTING_MODE false
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
