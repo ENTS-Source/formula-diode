@@ -46,7 +46,7 @@ class GameNet {
 
     // Setup / constructors
 //    GameNet(byte sdaPin, byte sclPin);
-    GameNet(int playerNum); // playerNum is the address
+    GameNet(byte playerNum); // playerNum is the address
 
     // Game host functions
     void update();

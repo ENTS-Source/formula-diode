@@ -25,7 +25,7 @@ void setup() {
   
   Serial.begin(115200);
 
-  int playerNum = 0;
+  byte playerNum = 0;
   if (HARDCODE_PLAYER_NUM < 0) {
     Serial.println("Reading player number");
     if (digitalRead(NUM_PIN_LOW) == HIGH) {
@@ -41,10 +41,10 @@ void setup() {
   Serial.print("Player num: ");
   Serial.println(playerNum);
   
+  gamenet = new GameNet(playerNum);
   accl = new Button(6);
   motor = new VibrationMotor(5);
   led = new IDLED();
-  gamenet = new GameNet(playerNum);
   led->setColor(0, 0, 0);
 }
 

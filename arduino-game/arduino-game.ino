@@ -7,6 +7,7 @@
 
 // NodeMCU / ESP8266
 
+#define NO_SCOREBOARD true
 #define COUNTING_MODE false
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
@@ -25,11 +26,12 @@
 #define GRAVITY_EFFECT 0.007
 #define SPEED_BOOST_FACTOR 0.3
 #define TAR_TRAP_FRICTION 0.18
-#define TAR_TRAP_ACCL 0.03
+#define TAR_TRAP_ACCL 0.06
 #define PHYSICS_MAX_VELOCITY 275000
 #define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
+#define GAME_TIMEOUT_MS 30000 // 30 seconds
 #define AUTO_RAND_MIN 0
 #define AUTO_RAND_MAX 1000
 #define AUTO_THRESHOLD 50 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
@@ -108,6 +110,7 @@ bool btnUpTrigger = false;
 bool btnPressed = false;
 long lastWireScan = 0;
 long lastRender = 0;
+long lastPress = 0;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -132,11 +135,15 @@ AsyncHTTPRequest reqPool[REQUESTS_IN_POOL] = {
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
+
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
+  
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
+  AsyncHTTPRequest{},
+  
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
   AsyncHTTPRequest{},
@@ -146,8 +153,8 @@ int reqPoolIdx = 0;
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
   Serial.begin(115200);
-  confSetup();
   gnetSetup();
+  confSetup();
   trakSetup();
   netSetup();
 
@@ -223,6 +230,7 @@ void playerPhysics(PlayerState &player) {
   int relPos = (player.location + player.length) % STRIP_LENGTH;
   bool tarTrap = (stripMap[relPos] & TAR_TRAP_ENABLED) != 0;
   for (int i = 0; i < player.unhandledPresses; i++) {
+    lastPress = millis();
     if (tarTrap) {
       player.velocity += TAR_TRAP_ACCL;
     } else {
@@ -361,8 +369,10 @@ bool trakUpdate() {
       lightsStartMs = millis();
       shouldReset = true;
       markGameIntro();
+      lastPress = millis();
     } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
       isAutomatedGame = true;
+      Serial.println("Screensaver");
       
       lightsStartMs = millis();
       shouldReset = true;
@@ -381,6 +391,10 @@ bool trakUpdate() {
       trakUpdatePlayers();
       trakDrawBoosts();
       trakDrawPlayers();
+    }
+    if (!isAutomatedGame && (millis() - lastPress) > GAME_TIMEOUT_MS) {
+      isAutomatedGame = true;
+      lastGameEnd = 0; // enter screensaver immediately
     }
   }
 
@@ -483,8 +497,10 @@ void printColor(CRGB color) {
 void trakDrawPlayers() {
   // Figure out where each player is an render them into the LEDs
   int positionMap[STRIP_LENGTH * STRIP_COUNT];
+  bool didTrapOverlay[STRIP_LENGTH * STRIP_COUNT];
   for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
     positionMap[i] = 0;
+    didTrapOverlay[i] = false;
   }
   for (int i = 0; i < I2C_PLAYERS; i++) {
     if (!players[i].isConnected) {
@@ -508,6 +524,10 @@ void trakDrawPlayers() {
 //      printColor(leds[targetLoc]);
 //      Serial.print(" plyr:");
 //      printColor(players[i].color);
+        if ((stripMap[targetLoc] & TAR_TRAP_ENABLED) != 0 && !didTrapOverlay[targetLoc]) {
+          leds[targetLoc] = CRGB(0, 0, 0);
+          didTrapOverlay[targetLoc] = true;
+        }
         leds[targetLoc] = CRGB(
           leds[targetLoc].r + players[i].color.r,
           leds[targetLoc].g + players[i].color.g,
@@ -675,33 +695,37 @@ void confSetup() {
 
 void confRead() {
   confReadString(CONF_SB_IP_ADDR, CONF_SB_IP_LEN, scoreboardIp);
+//  strcpy(scoreboardIp, NO_SB_IP);
 
   // Validation
-  MatchState ms;
-  ms.Target(scoreboardIp, CONF_SB_IP_LEN);
-  if (ms.Match("[0-9]+.[0-9]+.[0-9]+.[0-9]+") != REGEXP_MATCHED) {
-    Serial.print("Invalid scoreboard IP: ");
-    Serial.println(scoreboardIp);
-    strcpy(scoreboardIp, NO_SB_IP);
-  }
-  char str2[CONF_SB_IP_LEN] = "";
-  int j = 0;
-  for (int i = 0; i < CONF_SB_IP_LEN; i++) {
-    char c = scoreboardIp[i];
-    if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
-      str2[j] = c;
-      j++;
+  if (!NO_SCOREBOARD) {
+    MatchState ms;
+    ms.Target(scoreboardIp, CONF_SB_IP_LEN);
+    if (ms.Match("[0-9]+.[0-9]+.[0-9]+.[0-9]+") != REGEXP_MATCHED) {
+      Serial.print("Invalid scoreboard IP: ");
+      Serial.println(scoreboardIp);
+      strcpy(scoreboardIp, NO_SB_IP);
     }
+    char str2[CONF_SB_IP_LEN] = "";
+    int j = 0;
+    for (int i = 0; i < CONF_SB_IP_LEN; i++) {
+      char c = scoreboardIp[i];
+      if ((c >= 48 && c <= 57) || c == 46) { // number or full stop
+        str2[j] = c;
+        j++;
+      }
+    }
+    strcpy(scoreboardIp, str2);
+    if (strcmp(scoreboardIp, "") == 0) {
+      Serial.println("Scoreboard IP was empty - resetting");
+      strcpy(scoreboardIp, NO_SB_IP);
+    }
+//    scoreboardIp = NO_SB_IP;
+  
+    // Debug
+    Serial.print("Scoreboard IP: ");
+    Serial.println(scoreboardIp);
   }
-  strcpy(scoreboardIp, str2);
-  if (strcmp(scoreboardIp, "") == 0) {
-    Serial.println("Scoreboard IP was empty - resetting");
-    strcpy(scoreboardIp, NO_SB_IP);
-  }
-
-  // Debug
-  Serial.print("Scoreboard IP: ");
-  Serial.println(scoreboardIp);
 }
 
 void confWrite() {
@@ -814,7 +838,7 @@ void netSetup() {
 
   netSaveWmParams(); // just in case
 
-  if (scoreboardIp != NO_SB_IP) {
+  if (scoreboardIp != NO_SB_IP && !NO_SCOREBOARD) {
     Serial.println("Validating scoreboard details");
     IPAddress ip;
     if (!ip.fromString(scoreboardIp)) {
@@ -850,7 +874,7 @@ void netSaveWmParams() {
 // ===============================================================
 
 void markLapCompleted(int playerNum, int lap, long ms) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
     return;
   }
   int reqIdx = reqPoolIdx;
@@ -868,7 +892,7 @@ void markLapCompleted(int playerNum, int lap, long ms) {
 }
 
 void markAllLapsCompleted(int playerNum, long ms) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
     return;
   }
   int reqIdx = reqPoolIdx;
@@ -886,7 +910,7 @@ void markAllLapsCompleted(int playerNum, long ms) {
 }
 
 void markGameEnd(int winner) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
     return;
   }
   int reqIdx = reqPoolIdx;
@@ -904,7 +928,7 @@ void markGameEnd(int winner) {
 }
 
 void markGameStart(int numPlayers) {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
     return;
   }
   int reqIdx = reqPoolIdx;
@@ -922,7 +946,7 @@ void markGameStart(int numPlayers) {
 }
 
 void markGameIntro() {
-  if (strcmp(scoreboardIp, NO_SB_IP) == 0) {
+  if (strcmp(scoreboardIp, NO_SB_IP) == 0 || NO_SCOREBOARD) {
     return;
   }
   int reqIdx = reqPoolIdx;

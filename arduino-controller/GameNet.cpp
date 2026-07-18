@@ -45,7 +45,7 @@ void onWireRequest() {
 //  }
 //}
 
-GameNet::GameNet(int playerNum) {
+GameNet::GameNet(byte playerNum) {
   gamenetInstance = this;
   
   Wire.setClock(100000);
