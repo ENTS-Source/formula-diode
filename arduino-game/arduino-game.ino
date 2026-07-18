@@ -17,7 +17,6 @@ TODO:
 - Tar trap assist for kids / general kids boost (slow button presses consistently make the game un-fun)
 */
 
-#define COUNTING_MODE false
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
 #define SDA_PIN D2
 #define SCL_PIN D1
@@ -27,7 +26,7 @@ TODO:
 #define MAX_LAPS 3 // TODO: Config val
 #define LED_STRIP_PIN D4
 //#define STRIP_LENGTH 325
-#define STRIP_LENGTH 385
+//#define STRIP_LENGTH 385
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
 #define PHYSICS_ACCL 0.125 // Velocity added per button press
@@ -41,6 +40,7 @@ TODO:
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
 #define GAME_TIMEOUT_MS 30000 // 30 seconds
+#define COUNT_MODE_WAIT_MS 5000 // 5 seconds
 #define AUTO_RAND_MIN 0
 #define AUTO_RAND_MAX 1000
 #define AUTO_THRESHOLD 50 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
@@ -50,6 +50,7 @@ TODO:
 
 #define NOT_CONNECTED_PIN D6
 #define CONF_EEPROM_SIZE 512
+#define CONF_LENGTH_ADDR 128 // start a bit high to give wifimanager some room
 #define BTN_OPEN HIGH
 #define BTN_CLOSED LOW
 #define BTN_DEBOUNCE_MS 10
@@ -98,8 +99,9 @@ struct PlayerState {
   bool isConnected;
 };
 
-CRGB leds[STRIP_LENGTH * STRIP_COUNT];
-byte stripMap[STRIP_LENGTH * STRIP_COUNT];
+int stripLength = 0;
+CRGB* leds = nullptr;
+byte* stripMap = nullptr;
 long startTimeMs = 0;
 long lightsStartMs = 0;
 long endMs = 0;
@@ -113,6 +115,8 @@ bool btnPressed = false;
 long lastWireScan = 0;
 long lastRender = 0;
 long lastPress = 0;
+bool countingMode = false;
+long countModeStartTimeout = 0;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -134,17 +138,29 @@ PlayerState players[I2C_PLAYERS] = {
   PlayerState{},
 };
 
+void setupLeds() {
+  stripLength = confReadInt(CONF_LENGTH_ADDR);
+  if (stripLength <= 0) {
+    stripLength = 1;
+  }
+  leds = new CRGB[stripLength * STRIP_COUNT];
+  stripMap = new byte[stripLength * STRIP_COUNT];
+  Serial.print("Strip length: ");
+  Serial.println(stripLength);
+
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
+    stripMap[i] = 0;
+  }
+}
+
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
   Serial.begin(115200);
   gnetSetup();
   confSetup();
+  setupLeds();
   trakSetup();
   netSetup();
-
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
-    stripMap[i] = 0;
-  }
 
   int featureRows = sizeof(featuresRange) / sizeof(featuresRange[0]);
   for (int i = 0; i < featureRows; i++) {
@@ -167,18 +183,11 @@ void setup() {
   }
 
   gnetScan();
+  gnetResetAll();
   updatePlayerIds();
-
-  if (COUNTING_MODE) {
-    Serial.print("Entering track setup/LED counting mode");
-    trakCountStrip();
-  }
 }
 
 void loop() {
-  if (COUNTING_MODE) {
-    return; // don't actually do anything
-  }
   bool doReset = trakUpdate();
   if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
@@ -187,6 +196,34 @@ void loop() {
     updatePlayerIds();
   }
   gnetUpdate();
+  if (countingMode) {
+    int lenBefore = stripLength;
+    lastGameEnd = millis(); // avoid screensaver
+    stripLength += players[0].unhandledPresses;
+    stripLength -= players[1].unhandledPresses;
+    players[0].unhandledPresses = 0;
+    players[1].unhandledPresses = 1;
+    if (lenBefore != stripLength) {
+      confWriteInt(CONF_LENGTH_ADDR, stripLength);
+      setupLeds();
+      trakCountStrip();
+    }
+    if (btnPressed && (countModeStartTimeout == 0 || (millis() - countModeStartTimeout) >= COUNT_MODE_WAIT_MS * 2)) {
+      Serial.println("Exiting counting mode");
+      countingMode = false;
+    }
+  } else if (!inGame && !countingMode) {
+    if (countModeStartTimeout == 0 && btnDownTrigger) {
+      Serial.println("Starting count mode wait");
+      countModeStartTimeout = millis();
+    } else if (!btnPressed) {
+      // Serial.println("Resetting count mode wait");
+      countModeStartTimeout = 0;
+    } else if ((millis() - countModeStartTimeout) > COUNT_MODE_WAIT_MS) {
+      Serial.println("Entering counting mode");
+      countingMode = true;
+    }
+  }
 }
 
 void updatePlayerIds() {
@@ -207,7 +244,7 @@ void playerPhysics(PlayerState &player) {
     return; // they're done the race
   }
 
-  int relPos = (player.location + player.length) % STRIP_LENGTH;
+  int relPos = (player.location + player.length) % stripLength;
   bool tarTrap = (stripMap[relPos] & TAR_TRAP_ENABLED) != 0;
   for (int i = 0; i < player.unhandledPresses; i++) {
     lastPress = millis();
@@ -241,7 +278,7 @@ void playerPhysics(PlayerState &player) {
   player.location = round(player.position); // int location
 
   // Gravity, front wheel drive
-  relPos = (player.location + player.length) % STRIP_LENGTH;
+  relPos = (player.location + player.length) % stripLength;
   if ((stripMap[relPos] & GRAVITY_ENABLED) != 0) {
     float effect = GRAVITY_EFFECT;
     if ((stripMap[relPos] & SLOPE_FORWARD) == 0) {
@@ -279,7 +316,7 @@ void playerReset(PlayerState &player) {
 // ===============================================================
 
 void trakSetup() {
-  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, STRIP_LENGTH * STRIP_COUNT);
+  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, stripLength * STRIP_COUNT);
   trakClear();
   trakRender();
 }
@@ -289,8 +326,13 @@ void trakSetup() {
 
 bool trakUpdate() {
   bool shouldReset = false;
-  trakClear();
   btnUpdate();
+
+  if (countingMode) {
+    return shouldReset; // nothing to do except update the button
+  }
+
+  trakClear();
 
   if (!inGame) {
     if (winnerNum != NO_WINNER) {
@@ -355,7 +397,7 @@ bool trakUpdate() {
       shouldReset = true;
     }
   } else {
-    if (isAutomatedGame && btnDownTrigger) {
+    if (isAutomatedGame && btnUpTrigger) {
       lastGameEnd = millis(); // ensure another game can't start right away
 
       // force end the game
@@ -401,9 +443,9 @@ void trakUpdatePlayers() {
       players[i].unhandledPresses += AUTO_PRESSES_PER;
     }
 
-    int oldLaps = players[i].location / STRIP_LENGTH;
+    int oldLaps = players[i].location / stripLength;
     playerPhysics(players[i]);
-    int newLaps = players[i].location / STRIP_LENGTH;
+    int newLaps = players[i].location / stripLength;
 
     if (newLaps != oldLaps) {
       long lastLapMs = players[i].lastLapFinishMs;
@@ -414,7 +456,7 @@ void trakUpdatePlayers() {
       players[i].lastLapFinishMs = lapTime;
     }
 
-    if ((players[i].location / STRIP_LENGTH) >= MAX_LAPS) {
+    if ((players[i].location / stripLength) >= MAX_LAPS) {
       players[i].finishMs = millis();
     }
 
@@ -440,20 +482,20 @@ void trakUpdatePlayers() {
 // ======================================
 
 void trakClear() {
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     leds[i] = CRGB::Black;
   }
 }
 
 void trakCountStrip() {
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     leds[i] = SPEED_BOOST_COLOR;
   }
   trakRender();
 }
 
 void trakDrawWinner() {
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     leds[i] = players[winnerNum].color;
   }
 }
@@ -468,9 +510,9 @@ void printColor(CRGB color) {
 
 void trakDrawPlayers() {
   // Figure out where each player is an render them into the LEDs
-  int positionMap[STRIP_LENGTH * STRIP_COUNT];
-  bool didTrapOverlay[STRIP_LENGTH * STRIP_COUNT];
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  int positionMap[stripLength * STRIP_COUNT];
+  bool didTrapOverlay[stripLength * STRIP_COUNT];
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     positionMap[i] = 0;
     didTrapOverlay[i] = false;
   }
@@ -482,10 +524,10 @@ void trakDrawPlayers() {
       continue; // don't render: they're done
     }
 
-    int startPos = players[i].location % STRIP_LENGTH;
+    int startPos = players[i].location % stripLength;
     for (int j = 0; j < players[i].length; j++) {
       int targetLoc = startPos + j;
-      int maxStripPos = STRIP_LENGTH * STRIP_COUNT;
+      int maxStripPos = stripLength * STRIP_COUNT;
       if (targetLoc >= maxStripPos) {
         targetLoc = (targetLoc - maxStripPos); // overrun
       }
@@ -512,7 +554,7 @@ void trakDrawPlayers() {
   }
 
   // Mix colors
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     int mapHeight = positionMap[i];
     if (mapHeight > 1) {
       leds[i] = CRGB(
@@ -525,7 +567,7 @@ void trakDrawPlayers() {
 }
 
 void trakDrawBoosts() {
-  for (int i = 0; i < (STRIP_LENGTH * STRIP_COUNT); i++) {
+  for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     if ((stripMap[i] & SPEED_BOOST_ENABLED) != 0) {
       leds[i] = SPEED_BOOST_COLOR;
     }
@@ -713,7 +755,6 @@ void confWriteByte(int addr, byte val) {
 // ===============================================================
 
 WiFiManager wm;
-WiFiManagerParameter* scoreboardIPField;
 
 void netSetup() {
   WiFi.mode(WIFI_STA);
