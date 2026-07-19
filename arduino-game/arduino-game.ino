@@ -28,6 +28,7 @@ TODO:
 #define LED_STRIP_PIN D4
 //#define STRIP_LENGTH 325
 //#define STRIP_LENGTH 385
+#define MIN_STRIP_LENGTH 40
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
 #define PHYSICS_ACCL 0.125 // Velocity added per button press
@@ -100,7 +101,7 @@ struct PlayerState {
   bool isConnected;
 };
 
-int stripLength = 0;
+int stripLength = MIN_STRIP_LENGTH;
 CRGB* leds = nullptr;
 byte* stripMap = nullptr;
 long startTimeMs = 0;
@@ -212,8 +213,8 @@ void updatePlayerIds() {
 
 void ledSetup() {
   stripLength = confReadInt(CONF_LENGTH_ADDR);
-  if (stripLength <= 0) {
-    stripLength = 1;
+  if (stripLength <= MIN_STRIP_LENGTH) {
+    stripLength = MIN_STRIP_LENGTH;
   }
   leds = new CRGB[stripLength * STRIP_COUNT];
   stripMap = new byte[stripLength * STRIP_COUNT];
