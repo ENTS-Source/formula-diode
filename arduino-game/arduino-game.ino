@@ -442,12 +442,6 @@ bool trakUpdate() {
           }
         }
       }
-    } else if (btnUpTrigger) {
-      isAutomatedGame = false;
-      
-      lightsStartMs = millis();
-      shouldReset = true;
-      lastPress = millis();
     } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
       isAutomatedGame = true;
       Serial.println("Screensaver");
@@ -456,22 +450,22 @@ bool trakUpdate() {
       shouldReset = true;
     }
   } else {
-    if (isAutomatedGame && btnUpTrigger) {
-      lastGameEnd = millis(); // ensure another game can't start right away
-
-      // force end the game
-      endMs = 0;
-      inGame = false;
-      winnerNum = NO_WINNER;
-    } else {
-      trakUpdatePlayers();
-      trakDrawBoosts();
-      trakDrawPlayers();
-    }
+    trakUpdatePlayers();
+    trakDrawBoosts();
+    trakDrawPlayers();
     if (!isAutomatedGame && (millis() - lastPress) > GAME_TIMEOUT_MS) {
       isAutomatedGame = true;
       lastGameEnd = 0; // enter screensaver immediately
     }
+  }
+  
+  if (btnUpTrigger) {
+    // Interrupt current game and start a new one
+    isAutomatedGame = false;    
+    lightsStartMs = millis();
+    shouldReset = true;
+    lastPress = millis();
+    inGame = false;
   }
 
   if ((millis() - lastRender) >= RENDER_INTERVAL) {
