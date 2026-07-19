@@ -28,6 +28,7 @@ TODO:
 //#define STRIP_LENGTH 325
 //#define STRIP_LENGTH 385
 #define MIN_STRIP_LENGTH 40
+#define MAX_STRIP_LENGTH 600
 #define WINNER_SHOWN_MS 2500
 #define INIT_PLAYER_LENGTH 3
 #define PHYSICS_ACCL 0.125 // Velocity added per button press
@@ -102,8 +103,8 @@ struct PlayerState {
 };
 
 int stripLength = MIN_STRIP_LENGTH;
-CRGB* leds = nullptr;
-byte* stripMap = nullptr;
+CRGB leds[MAX_STRIP_LENGTH * STRIP_COUNT];
+byte stripMap[MAX_STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
 long lightsStartMs = 0;
 long endMs = 0;
@@ -119,6 +120,7 @@ long lastRender = 0;
 long lastPress = 0;
 bool countingMode = false;
 long countModeStartTimeout = 0;
+long lastCountModeChange = 0;
 
 CRGB TRAFFIC_RED = CRGB(255, 0, 0);
 CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
@@ -145,7 +147,7 @@ void setup() {
   Serial.begin(115200);
   gnetSetup();
   confSetup();
-  ledSetup();
+  ledSetup(false);
   trakSetup();
   netSetup();
 
@@ -176,22 +178,33 @@ void loop() {
   }
   gnetUpdate();
   if (countingMode) {
-    int lenBefore = stripLength;
+    int newLength = stripLength;
     lastGameEnd = millis(); // avoid screensaver
-    stripLength += players[0].unhandledPresses;
-    stripLength -= players[1].unhandledPresses;
+    newLength += players[0].unhandledPresses;
+    newLength -= players[1].unhandledPresses;
+    // Serial.print("Strip length: ");
+    // Serial.print(stripLength);
+    // Serial.print("     New strip length: ");
+    // Serial.print(newLength);
+    // Serial.print("     player0 presses: ");
+    // Serial.print(players[0].unhandledPresses);
+    // Serial.print("     player1 presses: ");
+    // Serial.println(players[1].unhandledPresses);
     players[0].unhandledPresses = 0;
-    players[1].unhandledPresses = 1;
-    if (lenBefore != stripLength) {
-      confWriteInt(CONF_LENGTH_ADDR, stripLength);
-      ledSetup();
+    players[1].unhandledPresses = 0;
+    if (newLength != stripLength) {
+      confWriteInt(CONF_LENGTH_ADDR, newLength);
+      confWrite();
+      ledSetup(true); // this will clear the old length and new length for us
       trakCountStrip();
     }
-    if (btnPressed && (countModeStartTimeout == 0 || (millis() - countModeStartTimeout) >= COUNT_MODE_WAIT_MS * 2)) {
+    if (btnPressed && (millis() - lastCountModeChange) > COUNT_MODE_WAIT_MS) {
       Serial.println("Exiting counting mode");
       countingMode = false;
+      countModeStartTimeout = millis();
+      lastCountModeChange = millis();
     }
-  } else if (!inGame && !countingMode) {
+  } else if (!inGame && !countingMode && (millis() - lastCountModeChange) > COUNT_MODE_WAIT_MS) {
     if (countModeStartTimeout == 0 && btnDownTrigger) {
       Serial.println("Starting count mode wait");
       countModeStartTimeout = millis();
@@ -201,6 +214,7 @@ void loop() {
     } else if ((millis() - countModeStartTimeout) > COUNT_MODE_WAIT_MS) {
       Serial.println("Entering counting mode");
       countingMode = true;
+      lastCountModeChange = millis();
     }
   }
 }
@@ -211,27 +225,26 @@ void updatePlayerIds() {
   }
 }
 
-void ledSetup() {
-  if (leds != nullptr) {
-    delete[] leds;
-    leds = nullptr;
-  }
-  if (stripMap != nullptr) {
-    delete[] stripMap;
-    stripMap = nullptr;
+void ledSetup(bool andClear) {
+  if (andClear) {
+    trakClear(); // clear old size
+    trakRender();
   }
 
   stripLength = confReadInt(CONF_LENGTH_ADDR);
   if (stripLength <= MIN_STRIP_LENGTH) {
     stripLength = MIN_STRIP_LENGTH;
   }
-  if (stripLength == 65535) { // account for an erased EEPROM having 0xFFFF
-    stripLength = MIN_STRIP_LENGTH;
+  if (stripLength > MAX_STRIP_LENGTH) { // also avoids empty EEPROM having 0xFFFF values (65535)
+    stripLength = MAX_STRIP_LENGTH;
   }
-  leds = new CRGB[stripLength * STRIP_COUNT];
-  stripMap = new byte[stripLength * STRIP_COUNT];
   Serial.print("Strip length: ");
   Serial.println(stripLength);
+  
+  if (andClear) {
+    trakClear(); // clear new size (if larger/different)
+    trakRender();
+  }
 
   for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     stripMap[i] = 0;
@@ -250,7 +263,6 @@ void ledSetup() {
     }
   }
   
-  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, stripLength * STRIP_COUNT);
   trakSetupForDrawPlayers();
 }
 
@@ -356,6 +368,7 @@ void playerReset(PlayerState &player) {
 void trakSetup() {
   trakClear();
   trakRender();
+  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, MAX_STRIP_LENGTH);
 }
 
 // Primary loop
@@ -420,7 +433,7 @@ bool trakUpdate() {
           }
         }
       }
-    } else if (btnDownTrigger) {
+    } else if (btnUpTrigger) {
       isAutomatedGame = false;
       
       lightsStartMs = millis();
