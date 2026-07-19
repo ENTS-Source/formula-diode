@@ -37,8 +37,8 @@ TODO:
 #define SPEED_BOOST_FACTOR 0.3
 #define TAR_TRAP_FRICTION 0.18
 #define TAR_TRAP_ACCL 0.06
-#define CATCHUP_BOOST_ACCL 0.1
-#define PHYSICS_MAX_VELOCITY 275000
+#define CATCHUP_BOOST_ACCL 0.20
+#define PHYSICS_MAX_VELOCITY 800000
 #define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
@@ -280,16 +280,25 @@ void playerPhysics(PlayerState &player) {
 
   // Check if player is behind
   bool behind = false;
+  uint8_t numFinished = 0;
   for (int i = 0; i < I2C_PLAYERS; i++) {
     PlayerState pl = players[i];
     if (pl.finishMs > 0 || !pl.isConnected) {
+      numFinished++;
       continue; // skip players that are already done
     }
     int diff = player.location - pl.location;
-    if (diff <= stripLength) { // 1 full lap behind
+    if (diff <= (-1 * stripLength)) { // 1 full lap behind
       behind = true;
     }
   }
+  // Serial.print("Behind? ");
+  // Serial.print(behind);
+  if (!behind && (I2C_PLAYERS - numFinished) == 1) {
+    behind = true;
+  }
+  // Serial.print("   Still? ");
+  // Serial.println(behind);
 
   int relPos = (player.location + player.length) % stripLength;
   bool tarTrap = (stripMap[relPos] & TAR_TRAP_ENABLED) != 0;
