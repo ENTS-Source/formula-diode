@@ -212,8 +212,20 @@ void updatePlayerIds() {
 }
 
 void ledSetup() {
+  if (leds != nullptr) {
+    delete[] leds;
+    leds = nullptr;
+  }
+  if (stripMap != nullptr) {
+    delete[] stripMap;
+    stripMap = nullptr;
+  }
+
   stripLength = confReadInt(CONF_LENGTH_ADDR);
   if (stripLength <= MIN_STRIP_LENGTH) {
+    stripLength = MIN_STRIP_LENGTH;
+  }
+  if (stripLength == 65535) { // account for an erased EEPROM having 0xFFFF
     stripLength = MIN_STRIP_LENGTH;
   }
   leds = new CRGB[stripLength * STRIP_COUNT];
@@ -237,6 +249,9 @@ void ledSetup() {
       stripMap[j] = flags;
     }
   }
+  
+  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, stripLength * STRIP_COUNT);
+  trakSetupForDrawPlayers();
 }
 
 // ---------------------------------------------------------------
@@ -339,7 +354,6 @@ void playerReset(PlayerState &player) {
 // ===============================================================
 
 void trakSetup() {
-  FastLED.addLeds<WS2812B, LED_STRIP_PIN, GRB>(leds, stripLength * STRIP_COUNT);
   trakClear();
   trakRender();
 }
@@ -531,10 +545,24 @@ void printColor(CRGB color) {
   Serial.print(color.b);
 }
 
+uint8_t* positionMap = nullptr;
+bool* didTrapOverlay = nullptr;
+
+void trakSetupForDrawPlayers() {
+  if (positionMap != nullptr) {
+    delete[] positionMap;
+    positionMap = nullptr;
+  }
+  if (didTrapOverlay != nullptr) {
+    delete[] didTrapOverlay;
+    didTrapOverlay = nullptr;
+  }
+  positionMap = new uint8_t[stripLength * STRIP_COUNT];
+  didTrapOverlay = new bool[stripLength * STRIP_COUNT];
+}
+
 void trakDrawPlayers() {
   // Figure out where each player is an render them into the LEDs
-  int positionMap[stripLength * STRIP_COUNT];
-  bool didTrapOverlay[stripLength * STRIP_COUNT];
   for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
     positionMap[i] = 0;
     didTrapOverlay[i] = false;
@@ -578,7 +606,7 @@ void trakDrawPlayers() {
 
   // Mix colors
   for (int i = 0; i < (stripLength * STRIP_COUNT); i++) {
-    int mapHeight = positionMap[i];
+    uint8_t mapHeight = positionMap[i];
     if (mapHeight > 1) {
       leds[i] = CRGB(
         leds[i].r / mapHeight,
@@ -823,7 +851,7 @@ void netSetup() {
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     unsigned int percent = total == 0 ? 0 : static_cast<unsigned int>(
-      (static_cast<uint64_t>(progress) * 100) / 100
+      (static_cast<uint64_t>(progress) * 100) / total
     );
     Serial.printf("OTA progress %u%%", percent);
     Serial.println();
