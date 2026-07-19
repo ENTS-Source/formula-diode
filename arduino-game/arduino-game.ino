@@ -15,7 +15,6 @@ TODO:
 - Make LED strip length web config (with visual so it can be easily measured)
 - Try to remove I2C dependency to deal with PCB flexing issues
 - Interrupt screensaver with controller buttons? (undecided)
-- Tar trap assist for kids / general kids boost (slow button presses consistently make the game un-fun)
 */
 
 #define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
@@ -37,6 +36,7 @@ TODO:
 #define SPEED_BOOST_FACTOR 0.3
 #define TAR_TRAP_FRICTION 0.18
 #define TAR_TRAP_ACCL 0.06
+#define CATCHUP_BOOST_ACCL 0.1
 #define PHYSICS_MAX_VELOCITY 275000
 #define PHYSICS_MIN_VELOCITY -2
 #define PHYSICS_MS 5 // Time between physics checks
@@ -251,9 +251,25 @@ void playerPhysics(PlayerState &player) {
     return; // they're done the race
   }
 
+  // Check if player is behind
+  bool behind = false;
+  for (int i = 0; i < I2C_PLAYERS; i++) {
+    PlayerState pl = players[i];
+    if (pl.finishMs > 0 || !pl.isConnected) {
+      continue; // skip players that are already done
+    }
+    int diff = player.location - pl.location;
+    if (diff <= stripLength) { // 1 full lap behind
+      behind = true;
+    }
+  }
+
   int relPos = (player.location + player.length) % stripLength;
   bool tarTrap = (stripMap[relPos] & TAR_TRAP_ENABLED) != 0;
   for (int i = 0; i < player.unhandledPresses; i++) {
+    if (behind) {
+      player.velocity += CATCHUP_BOOST_ACCL;
+    }
     lastPress = millis();
     if (tarTrap) {
       player.velocity += TAR_TRAP_ACCL;
