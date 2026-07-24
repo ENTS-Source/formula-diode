@@ -1,11 +1,9 @@
 #include <FastLED.h>
 #include <EEPROM.h>
 #include <Regexp.h>
-#include <WiFiManager.h>
 #include <Wire.h>
-#include <ArduinoOTA.h>
 
-// NodeMCU / ESP8266
+// Adafruit Feather RP2040 DVI
 
 /*
 TODO:
@@ -149,7 +147,6 @@ void setup() {
   confSetup();
   ledSetup(false);
   trakSetup();
-  netSetup();
 
   for (int i = 0; i < I2C_PLAYERS; i++) {
     playerReset(players[i]);
@@ -167,8 +164,6 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
-
   bool doReset = trakUpdate();
   if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
@@ -817,88 +812,4 @@ void confWriteByte(int addr, byte val) {
   EEPROM.write(addr, val);
 }
 
-// ---------------------------------------------------------------
-// ---- NETWORK
-// ===============================================================
-
-WiFiManager wm;
-
-void netSetup() {
-  WiFi.mode(WIFI_STA);
-  leds[NW_STATUS_LED] = CRGB(50, 5, 5);
-  trakRender();
-
-  btnUpdateBlocking();
-  if (btnPressed) {
-    Serial.println("WiFi reset button pressed - clearing settings");
-    wm.resetSettings();
-    confClear();
-  }
-
-  confRead();
-
-  std::vector<const char *> menu = {"wifi", "sep", "restart", "exit"};
-  wm.setMenu(menu);
-
-  bool worked = wm.autoConnect("LEDRacerGameBoard");
-  if (!worked) {
-    Serial.println("Failed to configure wifi");
-
-    // fail loop
-    while(true) {
-      leds[NW_STATUS_LED] = CRGB::Red;
-      trakRender();
-      delay(500);
-      leds[NW_STATUS_LED] = CRGB::Black;
-      trakRender();
-      delay(250);
-    }
-  }
-
-  Serial.print("Connected, IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // ArduinoOTA.setPassword("SafetyFirst!");
-  ArduinoOTA.onStart([]() {
-    Serial.println("OTA update started");
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("OTA update complete");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    unsigned int percent = total == 0 ? 0 : static_cast<unsigned int>(
-      (static_cast<uint64_t>(progress) * 100) / total
-    );
-    Serial.printf("OTA progress %u%%", percent);
-    Serial.println();
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("OTA error: %u - ", error);
-    switch(error) {
-      case OTA_AUTH_ERROR:
-        Serial.println("auth error");
-        break;
-      case OTA_BEGIN_ERROR:
-        Serial.println("begin error");
-        break;
-      case OTA_CONNECT_ERROR:
-        Serial.println("connect error");
-        break;
-      case OTA_RECEIVE_ERROR:
-        Serial.println("receive error");
-        break;
-      case OTA_END_ERROR:
-        Serial.println("end error");
-        break;
-      default:
-        Serial.println("unknown");
-        break;
-    }
-  });
-  ArduinoOTA.begin();
-  Serial.println("OTA ready");
-
-  leds[NW_STATUS_LED] = CRGB::Black;
-  trakRender();
-}
 
