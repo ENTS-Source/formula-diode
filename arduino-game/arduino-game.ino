@@ -1,6 +1,5 @@
 #include <FastLED.h>
 #include <EEPROM.h>
-#include <Regexp.h>
 #include <Wire.h>
 
 // Adafruit Feather RP2040 DVI
@@ -15,14 +14,12 @@ TODO:
 - Interrupt screensaver with controller buttons? (undecided)
 */
 
-#define BTN_PIN D5 // TODO: Will we need to support multiple buttons?
-#define SDA_PIN D2
-#define SCL_PIN D1
+#define BTN_PIN D25
 #define WIRE_SPEED 100000
 #define I2C_PLAYERS 4
 #define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MAX_LAPS 3 // TODO: Config val
-#define LED_STRIP_PIN D4
+#define LED_STRIP_PIN D5
 //#define STRIP_LENGTH 325
 //#define STRIP_LENGTH 385
 #define MIN_STRIP_LENGTH 40
@@ -649,7 +646,7 @@ void trakRender() {
 
 void gnetSetup() {
   Wire.setClock(WIRE_SPEED);
-  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.begin(); // no address - I2C controller
 }
 
 void gnetUpdate() {
