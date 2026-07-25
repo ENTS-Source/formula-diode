@@ -2,6 +2,8 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
+#include "Button.h"
+
 // Adafruit Feather RP2040 DVI
 
 /*
@@ -14,57 +16,70 @@ TODO:
 - Interrupt screensaver with controller buttons? (undecided)
 */
 
+// ==== Configuration/ ====
+
+// ---- Pin configuration
 #define BTN_PIN D25
-#define WIRE_SPEED 100000
-#define I2C_PLAYERS 4
-#define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
-#define MAX_LAPS 3 // TODO: Config val
+#define NOT_CONNECTED_PIN D6 // used to seed random
 #define LED_STRIP_PIN D5
-//#define STRIP_LENGTH 325
-//#define STRIP_LENGTH 385
+
+// ---- I2C/Wire configuration
+#define WIRE_SPEED 100000
+#define WIRE_PING_MS 5000
+#define I2C_PLAYERS 4
+#define I2C_PLAYER_START 0 // address
+
+// ---- LED configuration
+#define RENDER_INTERVAL 14
+
+// ---- Game configuration
+#define MAX_LAPS 3 // TODO: Config val
+#define STRIP_COUNT 1 // TODO: Support this being 2 (using logical strips)
 #define MIN_STRIP_LENGTH 40
 #define MAX_STRIP_LENGTH 600
+#define INIT_PLAYER_LENGTH 3 // TODO: Support making players longer/smaller
 #define WINNER_SHOWN_MS 2500
-#define INIT_PLAYER_LENGTH 3
-#define PHYSICS_ACCL 0.125 // Velocity added per button press
-#define PHYSICS_FRICTION 0.017
-#define GRAVITY_EFFECT 0.007
-#define SPEED_BOOST_FACTOR 0.3
-#define TAR_TRAP_FRICTION 0.18
-#define TAR_TRAP_ACCL 0.06
-#define CATCHUP_BOOST_ACCL 0.20
-#define PHYSICS_MAX_VELOCITY 800000
-#define PHYSICS_MIN_VELOCITY -2
-#define PHYSICS_MS 5 // Time between physics checks
 #define SCREENSAVER_WAIT_MS 120000 // 2 minutes
-#define GAME_TIMEOUT_MS 30000 // 30 seconds
+#define GAME_TIMEOUT_MS 30000 // 30 seconds, then finish the game by entering screensaver mode
 #define COUNT_MODE_WAIT_MS 5000 // 5 seconds
+
+// ---- Physics configuration
+#define PHYSICS_ACCL 0.125 // Velocity added per button press
+#define PHYSICS_FRICTION 0.017 // Velocity removed by not pressing button
+#define GRAVITY_EFFECT 0.007 // Force of gravity for loops
+#define SPEED_BOOST_FACTOR 0.3 // Added velocity for being in a speed boost
+#define TAR_TRAP_FRICTION 0.18 // Added friction for being in a tar trap
+#define TAR_TRAP_ACCL 0.06 // Velocity per button press while in a tar trap
+#define CATCHUP_BOOST_ACCL 0.20 // Extra velocity per button press when the player is behind
+#define PHYSICS_MAX_VELOCITY 800000 // Maximum speed of a player
+#define PHYSICS_MIN_VELOCITY -2 // Minimum speed of a player. Note that negative values allow the player to fall "down" hills.
+#define PHYSICS_MS 5 // Time between physics checks
+
+// ---- Screensaver/autoplay configuration
 #define AUTO_RAND_MIN 0
 #define AUTO_RAND_MAX 1000
 #define AUTO_THRESHOLD 50 // Note: debounce is typically 10ms, so 15/1000 is essentially saying "every 15ms, trigger"
 #define AUTO_PRESSES_PER 1
 #define AUTO_PLAYERS 2
-#define RENDER_INTERVAL 14
 
-#define NOT_CONNECTED_PIN D6
 #define CONF_EEPROM_SIZE 512
 #define CONF_LENGTH_ADDR 128 // start a bit high to give wifimanager some room
-#define BTN_OPEN HIGH
-#define BTN_CLOSED LOW
-#define BTN_DEBOUNCE_MS 10
-#define I2C_PLAYER_START 0 // address
 #define TOHOST_LENGTH 2  // btn 1 presses & btn 2 presses, 2 bytes
 #define FROMHOST_ASSIGN 0x10
 #define FROMHOST_RESET 0x11
 #define TRAFFIC_START 7 // address; +1 from bottom, for aesthetics. Must be at least 6
 #define NO_WINNER -1
 #define NW_STATUS_LED 4
-#define WIRE_PING_MS 5000
-#define GRAVITY_ENABLED B00000001
-#define SPEED_BOOST_ENABLED B00000100
-#define SLOPE_FORWARD B00000010
-#define SLOPE_BACKWARD B00000000 // inverse of forward
-#define TAR_TRAP_ENABLED B00001000
+
+#define GRAVITY_ENABLED 0b00000001
+#define SPEED_BOOST_ENABLED 0b00000100
+#define SLOPE_FORWARD 0b00000010
+#define SLOPE_BACKWARD 0b00000000 // inverse of forward
+#define TAR_TRAP_ENABLED 0b00001000
+
+// ==== /Configuration ====
+
+Button btn = Button(BTN_PIN);
 
 int featuresRange[][3] = {
   // 2022
@@ -107,9 +122,6 @@ long lastGameEnd = 0;
 int winnerNum = NO_WINNER;
 bool inGame = false;
 bool isAutomatedGame = false;
-bool btnDownTrigger = false;
-bool btnUpTrigger = false;
-bool btnPressed = false;
 long lastWireScan = 0;
 long lastRender = 0;
 long lastPress = 0;
@@ -158,6 +170,10 @@ void setup() {
   gnetScan();
   gnetResetAll();
   updatePlayerIds();
+
+  // Turn on builtin LED to indicate power/finished setup
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void loop() {
@@ -190,17 +206,17 @@ void loop() {
       ledSetup(true); // this will clear the old length and new length for us
       trakCountStrip();
     }
-    if (btnPressed && (millis() - lastCountModeChange) > COUNT_MODE_WAIT_MS) {
+    if (btn.isPressed && (millis() - lastCountModeChange) > COUNT_MODE_WAIT_MS) {
       Serial.println("Exiting counting mode");
       countingMode = false;
       countModeStartTimeout = millis();
       lastCountModeChange = millis();
     }
   } else if (!inGame && !countingMode && (millis() - lastCountModeChange) > COUNT_MODE_WAIT_MS) {
-    if (countModeStartTimeout == 0 && btnDownTrigger) {
+    if (countModeStartTimeout == 0 && btn.isDownTrigger) {
       Serial.println("Starting count mode wait");
       countModeStartTimeout = millis();
-    } else if (!btnPressed) {
+    } else if (!btn.isPressed) {
       // Serial.println("Resetting count mode wait");
       countModeStartTimeout = 0;
     } else if ((millis() - countModeStartTimeout) > COUNT_MODE_WAIT_MS) {
@@ -377,7 +393,7 @@ void trakSetup() {
 
 bool trakUpdate() {
   bool shouldReset = false;
-  btnUpdate();
+  btn.update();
 
   if (countingMode) {
     return shouldReset; // nothing to do except update the button
@@ -450,8 +466,8 @@ bool trakUpdate() {
       lastGameEnd = 0; // enter screensaver immediately
     }
   }
-  
-  if (btnUpTrigger) {
+
+  if (btn.isUpTrigger) {
     // Interrupt current game and start a new one
     isAutomatedGame = false;
     lightsStartMs = millis();
@@ -719,43 +735,6 @@ void gnetResetAll() {
   for (int i = 0; i < I2C_PLAYERS; i++) {
     gnetResetController(i);
   }
-}
-
-// ---------------------------------------------------------------
-// ---- BUTTON
-// ===============================================================
-
-int btnLastState = BTN_OPEN;
-int btnLastRead = BTN_OPEN;
-int btnLastReadMs = 0;
-
-void btnUpdate() {
-  btnDownTrigger = false;
-  btnUpTrigger = false;
-
-  int val = digitalRead(BTN_PIN);
-  if (val != btnLastRead) {
-    btnLastRead = val;
-    btnLastReadMs = millis();
-  }
-  if ((millis() - btnLastReadMs) > BTN_DEBOUNCE_MS) {
-    if (val != btnLastState) {
-      btnLastState = val;
-      if (btnLastState == BTN_CLOSED) {
-        btnPressed = true;
-        btnDownTrigger = true;
-      } else {
-        btnPressed = false;
-        btnUpTrigger = true;
-      }
-    }
-  }
-}
-
-void btnUpdateBlocking() {
-  btnUpdate();
-  delay(BTN_DEBOUNCE_MS + 5);
-  btnUpdate();
 }
 
 // ---------------------------------------------------------------
