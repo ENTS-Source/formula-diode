@@ -232,7 +232,7 @@ void ledSetup(bool andClear) {
   }
   Serial.print("Strip length: ");
   Serial.println(stripLength);
-  
+
   if (andClear) {
     trakClear(); // clear new size (if larger/different)
     trakRender();
@@ -254,7 +254,7 @@ void ledSetup(bool andClear) {
       stripMap[j] = flags;
     }
   }
-  
+
   trakSetupForDrawPlayers();
 }
 
@@ -405,7 +405,7 @@ bool trakUpdate() {
         leds[TRAFFIC_START + 6] = CRGB::Purple;
         leds[TRAFFIC_START + 5] = CRGB::Purple;
       }
-      
+
       leds[TRAFFIC_START - 0] = TRAFFIC_RED;
       leds[TRAFFIC_START - 1] = TRAFFIC_RED;
 
@@ -437,7 +437,7 @@ bool trakUpdate() {
     } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
       isAutomatedGame = true;
       Serial.println("Screensaver");
-      
+
       lightsStartMs = millis();
       shouldReset = true;
     }
@@ -453,7 +453,7 @@ bool trakUpdate() {
   
   if (btnUpTrigger) {
     // Interrupt current game and start a new one
-    isAutomatedGame = false;    
+    isAutomatedGame = false;
     lightsStartMs = millis();
     shouldReset = true;
     lastPress = millis();
@@ -476,7 +476,7 @@ void trakUpdatePlayers() {
     if (isAutomatedGame) {
       players[i].isConnected = (i < AUTO_PLAYERS);
     }
-    
+
     if (!players[i].isConnected) {
       continue;
     }
