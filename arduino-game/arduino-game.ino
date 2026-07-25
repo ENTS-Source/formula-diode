@@ -3,6 +3,7 @@
 #include <Wire.h>
 
 #include "Button.h"
+#include "TrafficLight.h"
 
 // Adafruit Feather RP2040 DVI
 
@@ -80,6 +81,7 @@ TODO:
 // ==== /Configuration ====
 
 Button btn = Button(BTN_PIN);
+TrafficLight light = TrafficLight();
 
 int featuresRange[][3] = {
   // 2022
@@ -116,7 +118,6 @@ int stripLength = MIN_STRIP_LENGTH;
 CRGB leds[MAX_STRIP_LENGTH * STRIP_COUNT];
 byte stripMap[MAX_STRIP_LENGTH * STRIP_COUNT];
 long startTimeMs = 0;
-long lightsStartMs = 0;
 long endMs = 0;
 long lastGameEnd = 0;
 int winnerNum = NO_WINNER;
@@ -128,10 +129,6 @@ long lastPress = 0;
 bool countingMode = false;
 long countModeStartTimeout = 0;
 long lastCountModeChange = 0;
-
-CRGB TRAFFIC_RED = CRGB(255, 0, 0);
-CRGB TRAFFIC_YELLOW = CRGB(239, 83, 0);
-CRGB TRAFFIC_GREEN = CRGB(0, 132, 5);
 
 CRGB SPEED_BOOST_COLOR = CRGB(255, 170, 0);
 CRGB TAR_TRAP_COLOR = CRGB(46, 0, 74);
@@ -178,7 +175,7 @@ void setup() {
 
 void loop() {
   bool doReset = trakUpdate();
-  if (doReset || ((!inGame || isAutomatedGame) && lightsStartMs == 0 && (millis() - lastWireScan) > WIRE_PING_MS)) {
+  if (doReset || ((!inGame || isAutomatedGame) && !light.isRunning() && (millis() - lastWireScan) > WIRE_PING_MS)) {
     lastWireScan = millis();
     gnetScan();
     gnetResetAll();
@@ -221,7 +218,7 @@ void loop() {
       countModeStartTimeout = 0;
     } else if ((millis() - countModeStartTimeout) > COUNT_MODE_WAIT_MS) {
       Serial.println("Entering counting mode");
-      countingMode = true;
+      // countingMode = true;
       lastCountModeChange = millis();
     }
   }
@@ -416,45 +413,35 @@ bool trakUpdate() {
           shouldReset = true;
         }
       }
-    } else if (lightsStartMs > 0) {
+    } else if (light.getMsRemaining() > 0) {
       if (isAutomatedGame) {
-        leds[TRAFFIC_START + 6] = CRGB::Purple;
-        leds[TRAFFIC_START + 5] = CRGB::Purple;
+        leds[TRAFFIC_START + TRAFFIC_LIGHT_FEATURE_LENGTH + 2] = CRGB::Purple;
+        leds[TRAFFIC_START + TRAFFIC_LIGHT_FEATURE_LENGTH + 1] = CRGB::Purple;
       }
 
-      leds[TRAFFIC_START - 0] = TRAFFIC_RED;
-      leds[TRAFFIC_START - 1] = TRAFFIC_RED;
-
-      if ((millis() - lightsStartMs) >= 1000) {
-        leds[TRAFFIC_START - 2] = TRAFFIC_YELLOW;
-        leds[TRAFFIC_START - 3] = TRAFFIC_YELLOW;
+      CRGB lightsFeature[TRAFFIC_LIGHT_FEATURE_LENGTH];
+      light.render(lightsFeature);
+      for (byte i = 0; i < TRAFFIC_LIGHT_FEATURE_LENGTH; i++) {
+        leds[TRAFFIC_START + i] = lightsFeature[i];
       }
+    } else if (light.isFinished()) {
+      shouldReset = true;
+      inGame = true;
+      // lightsStartMs = 0;
+      startTimeMs = millis();
 
-      if ((millis() - lightsStartMs) >= 2000) {
-        for (int i = 0; i < 6; i++) {
-          leds[TRAFFIC_START - i] = TRAFFIC_GREEN;
-        }
-      }
-
-      if ((millis() - lightsStartMs) >= 2400) {
-        shouldReset = true;
-        inGame = true;
-        lightsStartMs = 0;
-        startTimeMs = millis();
-
-        int nPlayers = 0;
-        for (int i = 0; i < I2C_PLAYERS; i++) {
-          playerReset(players[i]);
-          if (players[i].isConnected) {
-            nPlayers++;
-          }
+      int nPlayers = 0;
+      for (int i = 0; i < I2C_PLAYERS; i++) {
+        playerReset(players[i]);
+        if (players[i].isConnected) {
+          nPlayers++;
         }
       }
     } else if ((millis() - lastGameEnd) > SCREENSAVER_WAIT_MS) {
       isAutomatedGame = true;
       Serial.println("Screensaver");
 
-      lightsStartMs = millis();
+      light.resetAndStart();
       shouldReset = true;
     }
   } else {
@@ -470,7 +457,7 @@ bool trakUpdate() {
   if (btn.isUpTrigger) {
     // Interrupt current game and start a new one
     isAutomatedGame = false;
-    lightsStartMs = millis();
+    light.resetAndStart();
     shouldReset = true;
     lastPress = millis();
     inGame = false;
