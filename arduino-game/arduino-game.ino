@@ -24,12 +24,6 @@ TODO:
 #define NOT_CONNECTED_PIN D6 // used to seed random
 #define LED_STRIP_PIN D5
 
-// ---- I2C/Wire configuration
-#define WIRE_SPEED 100000
-#define WIRE_PING_MS 5000
-#define I2C_PLAYERS 4
-#define I2C_PLAYER_START 0 // address
-
 // ---- LED configuration
 #define RENDER_INTERVAL 14
 
@@ -132,19 +126,6 @@ long lastCountModeChange = 0;
 
 CRGB SPEED_BOOST_COLOR = CRGB(255, 170, 0);
 CRGB TAR_TRAP_COLOR = CRGB(46, 0, 74);
-
-CRGB colors[I2C_PLAYERS] = {
-  CRGB::Blue,
-  CRGB::Red,
-  CRGB::Green,
-  CRGB::Orange,
-};
-PlayerState players[I2C_PLAYERS] = {
-  PlayerState{},
-  PlayerState{},
-  PlayerState{},
-  PlayerState{},
-};
 
 void setup() {
   randomSeed(analogRead(NOT_CONNECTED_PIN));
@@ -363,16 +344,6 @@ void playerPhysics(PlayerState &player) {
     player.position = 0;
   }
   player.location = round(player.position);
-}
-
-void playerReset(PlayerState &player) {
-  player.length = INIT_PLAYER_LENGTH;
-  player.position = 0;
-  player.location = 0;
-  player.velocity = 0;
-  player.finishMs = 0;
-  player.lastLapFinishMs = 0;
-  player.unhandledPresses = 0;
 }
 
 // ---------------------------------------------------------------
